@@ -1,0 +1,29 @@
+{
+	"name": "dbmigrator/dbmigrator",
+	"description": "MySQL Data Base migrator tool",
+	"keywords": ["mysql", "migrator", "database"],
+	"homepage": "",
+	"type": "library",
+	"version": "2.0-dev",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Eugene Kurbatov",
+			"email": "eugene.kurbatov@gmail.com",
+			"homepage": "http://twitter.com/eugenixus",
+			"role": "Developer"
+		}
+	],
+	"support": {
+		"email": "eugene.kurbatov@gmail.com"	
+	},	
+	"require": {
+		"php": ">=5.3",
+		"symfony/console": "2.2.x-dev"				
+	},
+	"autoload": {
+		"psr-0": { 
+			"DBMigrator": "src/"			
+		}	
+	}
+}
