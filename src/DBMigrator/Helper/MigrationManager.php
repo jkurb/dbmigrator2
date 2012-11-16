@@ -10,9 +10,7 @@
  * @link     nolink
  */
 
-require_once 'Migration.php';
-require_once 'MigrationManagerHelper.php';
-require_once 'DirectoryHandler.php';
+namespace Helper;
 
 class MigrationManager
 {

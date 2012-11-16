@@ -17,9 +17,9 @@ class Create extends Base
 {
 	protected function configure()
 	{
-		$this->setName("commit")
-			->setDescription("Commit migration.")
-			->setHelp(sprintf('%sCommit migration.%s', PHP_EOL, PHP_EOL));
+		$this->setName("create")
+			->setDescription("Create empty migration.")
+			->setHelp(sprintf('%sCreate empty migration.%s', PHP_EOL, PHP_EOL));
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output)

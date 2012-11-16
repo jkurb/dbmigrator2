@@ -4,11 +4,11 @@
  *
  * PHP version 5
  *
- * @category PHP
- * @author   Eugene Kurbatov <eugene.kurbatov@gmail.com>
- * @version  Migration.php 27.05.11 17:38 evkur
- * @link     nolink
+ * @package
+ * @author  Eugene Kurbatov <ekur@i-loto.ru>
  */
+
+namespace Helper;
 
 class Migration
 {
@@ -26,4 +26,9 @@ class Migration
 	 * @var string Комментарий
 	 */
 	public $comment = null;
+
+	/**
+	 * @var bool Являетмя ли миграция текущей
+	 */
+	public $isCurrent = false;
 }

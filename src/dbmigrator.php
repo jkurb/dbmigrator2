@@ -1,6 +1,8 @@
 <?php
 
+use DBMigrator\DBMigratorApp;
+
 require realpath(__DIR__) . "/../vendor/autoload.php";
 
-$app = new \DBMigrator\DBMigratorApp();
+$app = new DBMigratorApp();
 $app->run();

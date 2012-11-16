@@ -10,19 +10,21 @@
  * @link     nolink
  */
 
-class DirectoryHandler
+namespace Helper;
+
+class FileSystem
 {
 	public static function clean($path)
 	{
-		$iterator = new RecursiveIteratorIterator
+		$iterator = new \RecursiveIteratorIterator
 		(
-			new RecursiveDirectoryIterator($path),
-			RecursiveIteratorIterator::CHILD_FIRST
+			new \RecursiveDirectoryIterator($path),
+			\RecursiveIteratorIterator::CHILD_FIRST
 		);
 
 		foreach ($iterator as $path)
 		{
-			/* @var DirectoryIterator $path */
+			/* @var \DirectoryIterator $path */
 			if ($path->getFilename() == "." || $path->getFilename() == "..")
 				continue;
 			else if ($path->isDir())
@@ -39,7 +41,7 @@ class DirectoryHandler
 			if (!is_dir($endDir))
 				mkdir($endDir);
 
-			for ($source = new DirectoryIterator($startDir); $source->valid(); $source->next())
+			for ($source = new \DirectoryIterator($startDir); $source->valid(); $source->next())
 			{
 				if ($source->getFilename() == '.' || $source->getFilename() == '..')
 					continue;
@@ -72,7 +74,7 @@ class DirectoryHandler
 		if (is_dir($target))
 		{
 			chmod($target, 0777);
-			for ($source = new DirectoryIterator($target); $source->valid(); $source->next())
+			for ($source = new \DirectoryIterator($target); $source->valid(); $source->next())
 			{
 				if ($source->getFilename() == '.' || $source->getFilename() == '..')
 					continue;
@@ -105,7 +107,7 @@ class DirectoryHandler
 		$list = array();
 		if (is_dir($target))
 		{
-			for ($source = new DirectoryIterator($target); $source->valid(); $source->next())
+			for ($source = new \DirectoryIterator($target); $source->valid(); $source->next())
 			{
 				if ($source->isDot())
 					continue;
