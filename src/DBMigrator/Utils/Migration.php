@@ -8,7 +8,7 @@
  * @author  Eugene Kurbatov <ekur@i-loto.ru>
  */
 
-namespace Helper;
+namespace Utils;
 
 class Migration
 {

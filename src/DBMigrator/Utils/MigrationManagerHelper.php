@@ -10,6 +10,8 @@
  * @link     nolink
  */
 
+namespace Utils;
+
 class MigrationManagerHelper
 {
 	public static $sqlFileSet = array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql', 'delta.sql');
@@ -36,22 +38,8 @@ class MigrationManagerHelper
 		$this->password = $password;
 		$this->dbname = $dbname;
 
-		$this->db = mysql_connect($this->host, $this->user, $this->password);
-		$this->checkDBConnect();
-
-		mysql_select_db($this->dbname,  $this->db);
-		$this->checkDBError();
-
-		$this->executeQuery("SET NAMES utf8");
-	}
-
-	/**
-	 * Закрывает соединение с базой
-	 */
-	function __destruct()
-	{
-		if (!is_null($this->db))
-			@mysql_close($this->db);
+		$this->db = new \PDO("mysql:host={$this->host};dbname={$this->dbname}", $this->user, $this->password, 
+			array(\PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));		
 	}
 
 	/**
@@ -60,12 +48,8 @@ class MigrationManagerHelper
 	 * @return void
 	 */
 	public function createTable()
-	{
-		mysql_select_db($this->dbname,  $this->db);
-		$this->checkDBError();
-
-		$this->executeQuery
-		(
+	{		
+		$this->db->exec(		
 			"CREATE TABLE IF NOT EXISTS `__migration`
 			(
 				`id`			INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -78,7 +62,7 @@ class MigrationManagerHelper
 
 	public function dropTable()
 	{
-		$this->executeQuery("DROP TABLE IF EXISTS `{$this->dbname}`.`__migration`");
+		$this->db->exec("DROP TABLE IF EXISTS `__migration`");
 	}
 
 	/**
@@ -88,61 +72,17 @@ class MigrationManagerHelper
 	 */
 	public function makeDBEmpty()
 	{
-		$this->executeQuery("DROP DATABASE IF EXISTS `{$this->dbname}`");
-		$this->executeQuery("CREATE DATABASE `{$this->dbname}`");
-	}
-
-		/**
-	 * Выполняет sql запрос
-	 *
-	 * @param  $sql Запрос
-	 *
-	 * @return resource
-	 */
-	public function executeQuery($sql)
-	{
-		$res = mysql_query($sql, $this->db);
-		$this->checkDBError($this->db);
-
-		return $res;
+		$this->db->exec("DROP DATABASE IF EXISTS `{$this->dbname}`");
+		$this->db->exec("CREATE DATABASE `{$this->dbname}`");
 	}
 
 	/**
-	 * Проверка ошибки mysql
+	 * Выполняет набор sql файлов из директории	 
 	 *
-	 * @throws RuntimeException
-	 * @return void
-	 */
-	public function checkDBError()
-	{
-		$errNum = mysql_errno($this->db);
-		$errorDesc = mysql_error($this->db);
-		if (0 != $errNum)
-			throw new RuntimeException("DataBase error: [". $errNum ."] " . $errorDesc, $errNum);
-	}
-
-	/**
-	 * Проверяет соединение с БД
-	 *
-	 * @throws RuntimeException
-	 *
-	 * @return void
-	 */
-	public function checkDBConnect()
-	{
-		$errNum = mysql_errno();
-		$errorDesc = mysql_error();
-		if (0 != $errNum)
-			throw new RuntimeException("DataBase error: [". $errNum ."] " . $errorDesc, $errNum);
-	}
-
-	/**
-	 * Выполняет набор sql файлов из директории
-	 *
-	 * @throws Exception
-	 * @param  $dir Директория с файлами миграции
+	 * @param  $dir     Директория с файлами миграции
 	 * @param  $fileSet Набор имен файлов для выполнения
 	 *
+	 * @throws Exception
 	 * @return void
 	 */
 	public function importFiles($dir, $fileSet)
@@ -194,7 +134,7 @@ class MigrationManagerHelper
 	 *
 	 * @param string $file путь к файлу с SQL кодом
 	 *
-	 * @return boolean|RuntimeException
+	 * @return \RuntimeException
 	 */
 	public function executeSQLFromFile($file)
 	{
@@ -203,7 +143,7 @@ class MigrationManagerHelper
 		echo "Applying file {$file}\n";
 		exec("mysql --host={$this->host} --password={$this->password} -u {$this->user} {$this->dbname} < {$file} 2>&1", $output, $retVal);
 		if ($retVal !== 0)
-			throw new RuntimeException("File: {$file}\n" . $this->parseConsoleError($output));
+			throw new \RuntimeException("File: {$file}\n" . $this->parseConsoleError($output));
 
 		return true;
 	}
@@ -280,7 +220,7 @@ class MigrationManagerHelper
 	public function getDeltaByBinLog($logPath, $startTime, $unique = false)
 	{
 		$sLogs = "";
-		$res = $this->executeQuery('SHOW BINARY LOGS');
+		$res = $this->db->exec("SHOW BINARY LOGS");
 		while ($log = mysql_fetch_array($res))
 		{
 			$sLogs .= $logPath . DIRECTORY_SEPARATOR . $log['Log_name'] . " ";
@@ -348,7 +288,7 @@ class MigrationManagerHelper
 	public function createDump($path)
 	{
 		if (!@mkdir($path, 0777))
-			throw new Exception("Can't create {$path}");
+			throw new \Exception("Can't create {$path}");
 
 		$this->genScheme($path);
 		$this->genData($path);

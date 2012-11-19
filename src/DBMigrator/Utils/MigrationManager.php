@@ -10,7 +10,7 @@
  * @link     nolink
  */
 
-namespace Helper;
+namespace Utils;
 
 class MigrationManager
 {
@@ -25,12 +25,7 @@ class MigrationManager
 	{
 		$this->dbHelper = new MigrationManagerHelper($host, $user, $password, $dbname);
 	}
-
-	function __destruct()
-	{
-		$this->dbHelper->__destruct();
-	}
-
+	
 	public function init($migrStorage)
 	{
 		// создаем таблицу
