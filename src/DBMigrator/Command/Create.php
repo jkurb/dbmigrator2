@@ -24,5 +24,8 @@ class Create extends Base
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
+		$path = $this->getApplication()->config["migrationStorage"];
+		file_put_contents("{$path}/delta.sql", null);
+		$output->writeln("Empty 'delta.sql' has created");
 	}
 }
