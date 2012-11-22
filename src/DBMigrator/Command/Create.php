@@ -25,7 +25,12 @@ class Create extends Base
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
 		$path = $this->getApplication()->config["migrationStorage"];
+				
+		if (!is_writable($path))
+			throw new \Exception("Path '{$path}' is not writable");	
+			
 		file_put_contents("{$path}/delta.sql", null);
-		$output->writeln("Empty 'delta.sql' has created");
+		
+		$output->writeln("\n<info>Empty 'delta.sql' has created</info>\n");
 	}
 }
