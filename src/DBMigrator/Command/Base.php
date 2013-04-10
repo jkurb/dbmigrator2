@@ -1,5 +1,4 @@
 <?php
-/** @noinspection PhpUndefinedNamespaceInspection */
 namespace DBMigrator\Command;
 
 use Symfony\Component\Console\Command\Command;
@@ -33,5 +32,5 @@ abstract class Base extends Command
 	protected function initialize(InputInterface $input, OutputInterface $output)
 	{
         $this->getApplication()->readConfig();
-	}		
+	}
 }

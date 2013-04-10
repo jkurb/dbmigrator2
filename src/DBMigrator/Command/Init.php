@@ -76,26 +76,29 @@ class Init extends Base
             exit(0);
         }
 
-        $config["host"] = $dialog->ask($output, "Host (default: localhost): ", "localhost");
-        $config["username"] = $dialog->askAndValidate($output, "User name: ", function ($value) {
+        $host = $dialog->ask($output, "Host (default: localhost): ", "localhost");
+
+	    $dbname = $dialog->askAndValidate($output, "Database: ", function ($value) {
+		    if (empty($value))
+			    throw new \Exception("Database can not be empty");
+
+		    return $value;
+	    });
+
+	    $config["db"]["dsn"] = "mysql:dbname={$dbname};host={$host}";
+
+        $config["db"]["user"] = $dialog->askAndValidate($output, "User name: ", function ($value) {
             if (empty($value))
                 throw new \Exception("Username can not be empty");
 
             return $value;
         });
 
-        $config["database"] = $dialog->askAndValidate($output, "Database: ", function ($value) {
-            if (empty($value))
-                throw new \Exception("Database can not be empty");
+	    $config["db"]["pass"] = $dialog->ask($output, "Password: ", "");
 
-            return $value;
-        });
+        $config["migration"]["table"] = $dialog->ask($output, "Migration table name (defalut: __migrations): ", "__migration");
 
-        $config["password"] = $dialog->ask($output, "Password: ", "");
-
-        $config["table"] = $dialog->ask($output, "Migration table name (defalut: __migrations): ", "__migration");
-
-        $config["path"] = $dialog->askAndValidate($output, "Migration path: ", function ($value) {
+	    $config["migration"]["path"] = $dialog->askAndValidate($output, "Migration path: ", function ($value) {
             if (!is_dir($value))
                 throw new \Exception("Directory does not exist");
 
