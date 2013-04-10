@@ -15,15 +15,17 @@
 		}
 	],
 	"support": {
-		"email": "eugene.kurbatov@gmail.com"	
-	},	
+		"email": "eugene.kurbatov@gmail.com"
+	},
 	"require": {
 		"php": ">=5.3",
-		"symfony/console": "2.2.x-dev"				
+		"symfony/console": "2.*",
+        "symfony/yaml": "2.*",
+        "doctrine/orm": "2.*"
 	},
 	"autoload": {
-		"psr-0": { 
-			"DBMigrator": "src/"			
-		}	
+		"psr-0": {
+			"DBMigrator": "src/"
+		}
 	}
 }

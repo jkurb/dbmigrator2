@@ -10,7 +10,9 @@
  * @link     nolink
  */
 
-namespace Utils;
+namespace DBMigrator\Utils;
+
+use Exception;
 
 class MigrationManager
 {
@@ -19,21 +21,21 @@ class MigrationManager
 	 *
 	 * @var MigrationManagerHelper
 	 */
-	public $dbHelper = null;
+	public $helper = null;
 
 	function __construct($host, $user, $password, $dbname)
 	{
-		$this->dbHelper = new MigrationManagerHelper($host, $user, $password, $dbname);
+		$this->helper = new MigrationManagerHelper($host, $user, $password, $dbname);
 	}
 	
 	public function init($migrStorage)
 	{
 		// создаем таблицу
-		$this->dbHelper->createTable();
+		$this->helper->createTable();
 
 		// проверяем существование начальной миграции
 		if ($this->getMigrationById(1))
-			throw new Exception("Can't apply init migration, because another exists");
+			throw new \Exception("Can't apply init migration, because another exists");
 
 		// строим миграцию
 		$uid = $this->buildMigration($migrStorage, 'Init migration');
@@ -43,22 +45,22 @@ class MigrationManager
 
 	}
 
-	/**
-	 * Добавляет миграцию в хранилище
-	 *
-	 * @throws Exception
-	 * @param  $migrPath Директория, где хранится миграция для добаваления
-	 * @param  $migrStorage Директория, где хранятся миграции
-	 * @param string $comment Комментарий к миграции
-	 *
-	 * @return void
-	 */
+    /**
+     * Добавляет миграцию в хранилище
+     *
+     * @param  $migrPath Директория, где хранится миграция для добаваления
+     * @param  $migrStorage Директория, где хранятся миграции
+     * @param string $comment Комментарий к миграции
+     *
+     * @throws Exception
+     * @return void
+     */
 	public function commitMigration($migrPath, $migrStorage, $comment = '')
 	{
 		if (!$this->getMigrationById(1))
 			throw new Exception("Need init migration");
 
-		$this->dbHelper->checkFile("{$migrPath}/delta.sql");
+		$this->helper->checkFile("{$migrPath}/delta.sql");
 
 		$uid = $this->buildMigration($migrStorage, $comment);
 
@@ -70,7 +72,7 @@ class MigrationManager
 
 		self::putInsertMigrationSql($uid, $comment, $path);
 
-		DirectoryHandler::delete($migrPath);
+		FileSystem::delete($migrPath);
 
 		self::setCurrentVersion($migrStorage, $uid);
 	}
@@ -102,7 +104,7 @@ class MigrationManager
 		$time = $this->getCurrentTime();
 		$path = "{$migrStorage}/{$time}";
 
-		$this->dbHelper->checkDir($migrStorage, $path);
+		$this->helper->checkDir($migrStorage, $path);
 
 		// создаем запись в таблице
 		if (!$this->getMigrationByTime($time))
@@ -112,7 +114,7 @@ class MigrationManager
 		}
 
 		// создаем начальный каталог c дампом базы
-		$this->dbHelper->createDump($path);
+		$this->helper->createDump($path);
 
 		return $time;
 	}
@@ -136,17 +138,19 @@ class MigrationManager
 	 */
 	public function gotoMigration($migrStorage, $uid, $force = false)
 	{
+        $fileSet = array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql');
+
 		$migrations = $this->getAllMigrations();
 
 		$this->checkMigrations($migrations);
 		$this->checkMigration($uid, $migrations);
 
-		$this->dbHelper->makeDBEmpty();
+		$this->helper->makeDBEmpty();
 
 		if ($force)
 		{
-			$this->dbHelper->importFiles("{$migrStorage}/{$uid}",
-				array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql'));
+
+            $this->helper->importFiles("{$migrStorage}/{$uid}", $fileSet);
 		}
 		else
 		{
@@ -157,12 +161,11 @@ class MigrationManager
 			{
 				if ($m->id == 1)
 				{
-					$this->dbHelper->importFiles("{$migrStorage}/{$m->createTime}",
-						array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql'));
+					$this->helper->importFiles("{$migrStorage}/{$m->createTime}", $fileSet);
 				}
 				else
 				{
-					$this->dbHelper->importFiles("{$migrStorage}/{$m->createTime}", array('delta.sql'));
+					$this->helper->importFiles("{$migrStorage}/{$m->createTime}", array('delta.sql'));
 				}
 
 				if ($m->createTime == $uid)
@@ -180,20 +183,12 @@ class MigrationManager
 	 *
 	 * @param string $order Порядок сортировки
 	 *
-	 * @return array of @see Migration
+	 * @return Migration[]
 	 */
 	public function getAllMigrations($order = "ASC")
 	{
-		$migrations = array();
-
-		$sql = "SELECT * FROM __migration ORDER BY createTime {$order}";
-		$res = $this->dbHelper->executeQuery($sql);
-		while ($m = mysql_fetch_object($res, "Migration"))
-		{
-			$migrations[]  = $m;
-		}
-
-		return $migrations;
+		return $this->helper->enitityManager->getRepository("Migration")
+            ->findAll(array(), array("createTime" => $order));
 	}
 
 	/**
@@ -203,11 +198,8 @@ class MigrationManager
 	 */
 	public function getLastMigration()
 	{
-		$sql = "SELECT * FROM __migration ORDER BY createTime DESC LIMIT 1";
-		$res = $this->dbHelper->executeQuery($sql);
-		$m = mysql_fetch_object($res);
-
-		return $m;
+        return $this->helper->enitityManager->getRepository("Migration")
+            ->findOneBy(array(), array("createTime" => "DESC"));
 	}
 
 	/**
@@ -227,15 +219,12 @@ class MigrationManager
 	 *
 	 * @param $time
 	 *
-	 * @return an|object
+	 * @return Migration
 	 */
 	public function getMigrationByTime($time)
 	{
-		$sql = "SELECT * FROM __migration WHERE createTime = {$time}";
-		$res = $this->dbHelper->executeQuery($sql);
-		$m = mysql_fetch_object($res);
-
-		return $m;
+        return $this->helper->enitityManager->getRepository("Migration")
+            ->findOneBy(array("createTime" => $time), array("createTime" => "DESC"));
 	}
 
 	/**
@@ -243,15 +232,11 @@ class MigrationManager
 	 *
 	 * @param $id
 	 *
-	 * @return an|object
+	 * @return Migration
 	 */
 	public function getMigrationById($id)
 	{
-		$sql = "SELECT * FROM __migration WHERE id = {$id}";
-		$res = $this->dbHelper->executeQuery($sql);
-		$m = mysql_fetch_object($res);
-
-		return $m;
+        return $this->helper->enitityManager->getRepository("Migration")->find($id);
 	}
 
    /**
@@ -264,7 +249,7 @@ class MigrationManager
 	private function getMigrationUidsByDirectories($migrStorage)
 	{
 		$pattern = "/^\d{10}\.\d{4}$/is";
-		return DirectoryHandler::fileList($migrStorage, $pattern, true);
+		return FileSystem::fileList($migrStorage, $pattern, true);
 	}
 
 	/**
@@ -283,31 +268,14 @@ class MigrationManager
 		MigrationManagerHelper::createEmptyDelta($migrPath);
 	}
 
-	/**
-	* Удаляет миграцию
-	*
-	* @throws Exception
-	* @param  $migrUuid Номер миграции
-	* @param  $migrStorage Директория, где хранятся миграции
-	*
-	* @return void
-	*/
-	public function deleteMigration($migrUuid, $migrStorage)
-	{
-		$this->checkMigration($migrUuid);
-
-		$sql = "DELETE FROM __migration WHERE uuid = '{$migrUuid}'";
-		$this->dbHelper->executeQuery($sql);
-
-		MigrationManagerHelper::cleanMigrDir("{$migrStorage}/{$migrUuid}");
-	}
-
 	public function insertMigration($createTime, $comment)
 	{
-		$sql = "INSERT INTO __migration (createTime, comment)
-			VALUES ({$createTime}, '{$comment}')";
+        $m = new Migration();
+        $m->createTime = $createTime;
+        $m->comment = $comment;
 
-		$this->dbHelper->executeQuery($sql);
+        $this->helper->enitityManager->persist($m);
+        $this->helper->enitityManager->flush();
 	}
 
 	/**
@@ -319,16 +287,14 @@ class MigrationManager
 	 */
 	public function restoreMigrations($migrations)
 	{
-		$this->dbHelper->dropTable();
-		$this->dbHelper->createTable();
+		$this->helper->dropAndCreateTable();
 
 		/* @var $m Migration */
 		foreach ($migrations as $m)
 		{
-			$sql = "INSERT INTO __migration (id, createTime, comment)
-				VALUES ({$m->id}, {$m->createTime}, '{$m->comment}');";
-			$this->dbHelper->executeQuery($sql);
+			$this->helper->enitityManager->persist($m);
 		}
+        $this->helper->enitityManager->flush();
 	}
 
 	public function gotoLastMigration($migrStorage)
@@ -343,17 +309,17 @@ class MigrationManager
 
 	private function applyMigrationsByUids($migrStorage, $migrationsUids)
 	{
-		$this->dbHelper->makeDBEmpty();
+		$this->helper->makeDBEmpty();
 
 		// apply init migration
 		$_migrationsUids = $migrationsUids;
 		$uid = array_shift($_migrationsUids);
-		$this->dbHelper->importFiles("{$migrStorage}/{$uid}",
+		$this->helper->importFiles("{$migrStorage}/{$uid}",
 				array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql'));
 
 		foreach ($_migrationsUids as $uid)
 		{
-			$this->dbHelper->importFiles("{$migrStorage}/{$uid}", array('delta.sql'));
+			$this->helper->importFiles("{$migrStorage}/{$uid}", array('delta.sql'));
 		}
 
 		self::setCurrentVersion($migrStorage, end($migrationsUids));
@@ -390,48 +356,45 @@ class MigrationManager
 			throw new Exception("Migration {$uuid} not found");
 	}
 
-	public static function getCurrentVersion($migrStorage)
+	public function getCurrentVersion()
 	{
-		$path = $migrStorage . DIRECTORY_SEPARATOR . 'migration.xml';
-		if (!file_exists($path))
-			throw new Exception("File {$path} not found");
-
-		$xml = new DomDocument('1.0','utf-8');
-		$xml->load($path);
-		return $xml->getElementsByTagName('version')->item(0)->nodeValue;
+        return $this->helper->enitityManager->getRepository("Migration")
+            ->findOneBy(array("isCurrent" => true))->id;
 	}
 
-	public static function setCurrentVersion($migrStorage, $version)
+	public function setCurrentVersion($id)
 	{
-		$path = $migrStorage . DIRECTORY_SEPARATOR . 'migration.xml';
-		$xml = new DomDocument('1.0','utf-8');
+        $m = $this->helper->enitityManager->getRepository("Migration")
+            ->find($id);
 
-		$xml->loadXML("<version>{$version}</version>");
-		$xml->save($path);
-	}
+        $m->isCurrent = true;
+
+        $this->helper->enitityManager->persist($m);
+        $this->helper->enitityManager->flush();
+    }
 
 	public function getDeltaByBinLog($binaryLogPath, $migrStorage, $unique = false)
 	{
-		$currMigration = $this->getMigrationByTime($this->getCurrentVersion($migrStorage));
-
-		if (!$currMigration)
-			throw new Exception("Incorrect current migration");
-
-		$r = $this->dbHelper->executeQuery("SELECT NOW()");
-		$endTime = mysql_result($r, 0);
-
-		$res = $this->dbHelper->executeQuery("SELECT FROM_UNIXTIME({$currMigration->createTime})");
-		$startTime = mysql_result($res, 0);
-
-		$queries = $this->dbHelper->getDeltaByBinLog($binaryLogPath, $startTime, $unique);
-
-		echo "# Delta from {$startTime} to {$endTime}";
-		if ($unique)
-			echo " (Unique)";
-
-		echo "\n\n";
-
-		return $queries . "\n";
+//		$currMigration = $this->getMigrationByTime($this->getCurrentVersion($migrStorage));
+//
+//		if (!$currMigration)
+//			throw new Exception("Incorrect current migration");
+//
+//		$r = $this->helper->executeQuery("SELECT NOW()");
+//		$endTime = mysql_result($r, 0);
+//
+//		$res = $this->helper->executeQuery("SELECT FROM_UNIXTIME({$currMigration->createTime})");
+//		$startTime = mysql_result($res, 0);
+//
+//		$queries = $this->helper->getDeltaByBinLog($binaryLogPath, $startTime, $unique);
+//
+//		echo "# Delta from {$startTime} to {$endTime}";
+//		if ($unique)
+//			echo " (Unique)";
+//
+//		echo "\n\n";
+//
+//		return $queries . "\n";
 	}
 
 }

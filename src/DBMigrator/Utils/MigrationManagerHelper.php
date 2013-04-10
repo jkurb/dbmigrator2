@@ -10,13 +10,18 @@
  * @link     nolink
  */
 
-namespace Utils;
+namespace DBMigrator\Utils;
+
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Tools\SchemaTool;
+use Doctrine\ORM\Tools\Setup;
+use Exception;
 
 class MigrationManagerHelper
 {
 	public static $sqlFileSet = array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql', 'delta.sql');
 
-	private $db = null;
+	public $enitityManager = null;
 	private $host = null;
 	private $user = null;
 	private $password = null;
@@ -38,8 +43,16 @@ class MigrationManagerHelper
 		$this->password = $password;
 		$this->dbname = $dbname;
 
-		$this->db = new \PDO("mysql:host={$this->host};dbname={$this->dbname}", $this->user, $this->password, 
-			array(\PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));		
+        // the connection configuration
+        $dbParams = array(
+            'driver'   => 'pdo_mysql',
+            'user'     => $this->user,
+            'password' => $this->password,
+            'dbname'   => $this->dbname,
+        );
+
+        $config = Setup::createAnnotationMetadataConfiguration(array("./Migration.php"), true);
+		$this->enitityManager = EntityManager::create($dbParams, $config);
 	}
 
 	/**
@@ -48,21 +61,22 @@ class MigrationManagerHelper
 	 * @return void
 	 */
 	public function createTable()
-	{		
-		$this->db->exec(		
-			"CREATE TABLE IF NOT EXISTS `__migration`
-			(
-				`id`			INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-				`createTime`	DECIMAL(14, 4) NOT NULL,
-				`comment`		VARCHAR(255) NOT NULL,
-				PRIMARY KEY (`id`)
-			)"
-		);
+	{
+        if (!$this->enitityManager->getConnection()->getSchemaManager()->tablesExist(array("__migration")))
+        {
+            $st = new SchemaTool($this->enitityManager);
+
+            $sqls = $st->getCreateSchemaSql(
+                array($this->enitityManager->getClassMetadata(__NAMESPACE__ . "\\Migration"))
+            );
+
+            $this->enitityManager->getConnection()->executeQuery($sqls[0]);
+        }
 	}
 
-	public function dropTable()
+	public function dropAndCreateTable()
 	{
-		$this->db->exec("DROP TABLE IF EXISTS `__migration`");
+		$this->enitityManager->getConnection()->getSchemaManager()->dropAndCreateTable("__migration");
 	}
 
 	/**
@@ -72,8 +86,7 @@ class MigrationManagerHelper
 	 */
 	public function makeDBEmpty()
 	{
-		$this->db->exec("DROP DATABASE IF EXISTS `{$this->dbname}`");
-		$this->db->exec("CREATE DATABASE `{$this->dbname}`");
+        $this->enitityManager->getConnection()->getSchemaManager()->dropAndCreateDatabase($this->dbname);
 	}
 
 	/**
@@ -129,13 +142,13 @@ class MigrationManagerHelper
 			throw new Exception("Put your code in {$path}");
 	}
 
-	/**
-	 * Загружает файл с SQL кодом напрямую в БД
-	 *
-	 * @param string $file путь к файлу с SQL кодом
-	 *
-	 * @return \RuntimeException
-	 */
+    /**
+     * Загружает файл с SQL кодом напрямую в БД
+     *
+     * @param string $file путь к файлу с SQL кодом
+     *
+     * @throws \RuntimeException
+     */
 	public function executeSQLFromFile($file)
 	{
 		$retVal = null;
@@ -144,8 +157,6 @@ class MigrationManagerHelper
 		exec("mysql --host={$this->host} --password={$this->password} -u {$this->user} {$this->dbname} < {$file} 2>&1", $output, $retVal);
 		if ($retVal !== 0)
 			throw new \RuntimeException("File: {$file}\n" . $this->parseConsoleError($output));
-
-		return true;
 	}
 
 	/**
@@ -220,11 +231,13 @@ class MigrationManagerHelper
 	public function getDeltaByBinLog($logPath, $startTime, $unique = false)
 	{
 		$sLogs = "";
-		$res = $this->db->exec("SHOW BINARY LOGS");
-		while ($log = mysql_fetch_array($res))
-		{
-			$sLogs .= $logPath . DIRECTORY_SEPARATOR . $log['Log_name'] . " ";
-		}
+		$st = $this->enitityManager->getConnection()->executeQuery("SHOW BINARY LOGS");
+
+        foreach ($st->fetchAll(\PDO::FETCH_ASSOC) as $log)
+        {
+            $sLogs .= $logPath . DIRECTORY_SEPARATOR . $log['Log_name'] . " ";
+        }
+
 		$command = "mysqlbinlog -s -d {$this->dbname} --start-datetime=\"{$startTime}\" -t {$sLogs}" . "\n";
 		exec($command, $q);
 		$out = implode("\n", $q);
@@ -385,4 +398,9 @@ class MigrationManagerHelper
 
 		echo "\nCompleted...\n";
 	}
+
+    public function executeQuery($sql)
+    {
+        $this->enitityManager->getConnection()->executeQuery($sql);
+    }
 }

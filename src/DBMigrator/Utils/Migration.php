@@ -8,27 +8,40 @@
  * @author  Eugene Kurbatov <ekur@i-loto.ru>
  */
 
-namespace Utils;
+namespace DBMigrator\Utils;
 
+/**
+ * @Entity
+ * @Table(name="__migration")
+ */
 class Migration
 {
-	/**
-	 * @var int Id миграции
-	 */
+    /**
+     * Id миграции
+     *
+     * @Id @Column(type="integer", length=10)
+     * @GeneratedValue
+     */
 	public $id = null;
 
 	/**
-	 * @var string Врем создания в unixtime
+	 * Время создания в unixtime
+     *
+     * @Column(type="decimal", scale=4, precision=14)
 	 */
 	public $createTime = null;
 
 	/**
-	 * @var string Комментарий
+	 * Комментарий
+     *
+     * @Column(type="string", length=255)
 	 */
 	public $comment = null;
 
 	/**
-	 * @var bool Являетмя ли миграция текущей
+	 * Является ли миграция текущей
+     *
+     * @Column(type="boolean")
 	 */
 	public $isCurrent = false;
 }

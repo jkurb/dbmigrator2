@@ -10,7 +10,7 @@
  * @link     nolink
  */
 
-namespace Helper;
+namespace DBMigrator\Utils;
 
 class FileSystem
 {

@@ -3,18 +3,11 @@
 namespace DBMigrator;
 
 use Symfony\Component\Console\Application;
-	
+use Symfony\Component\Yaml\Yaml;
 
 class DBMigratorApp extends Application 
 {		
-	const DEFAULT_CONFIG_NAME = "dbmigrator.ini";
-	
-	/**
-	 * Менеджер миграций
-	 *
-	 * @var MigrationManager
-	 */
-	public $manager = null;
+	const DEFAULT_CONFIG_NAME = "dbmigrator.yml";
 
 	/**
 	 * Конфиг
@@ -28,13 +21,8 @@ class DBMigratorApp extends Application
     	parent::__construct("Welcome to DBMigrator", "2.0");
 	    $this->setCatchExceptions(true);	 
 	    $this->setAutoExit(false);
-	    
-	    $path = $this->getConfigPath();	    
-	    if (is_file($path))	    
-		    $this->config = parse_ini_file($path);	    
-	    
-	    $this->manager = new \stdClass();	    
-		    	    	    
+
+        // todo: load commands from dir
     	$this->addCommands(array(
 			new Command\Check(),			
 			new Command\Init(),			
@@ -47,8 +35,13 @@ class DBMigratorApp extends Application
 		));
     }
 
-	private function getConfigPath()
-	{
-		return __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . self::DEFAULT_CONFIG_NAME;
-	}
+	public function readConfig()
+    {
+        if (!is_file(DBMigratorApp::DEFAULT_CONFIG_NAME))
+        {
+            throw new \Exception(sprintf("Configuration file: '%s' not found", DBMigratorApp::DEFAULT_CONFIG_NAME));
+        }
+
+        $this->config = Yaml::parse(DBMigratorApp::DEFAULT_CONFIG_NAME);
+    }
 }

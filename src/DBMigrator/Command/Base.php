@@ -1,12 +1,23 @@
 <?php
+/** @noinspection PhpUndefinedNamespaceInspection */
 namespace DBMigrator\Command;
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Yaml\Yaml;
+use DBMigrator\Utils\MigrationManager;
 
+/**
+ * @method DBMigrator\DBMigratorApp getApplication()
+ */
 abstract class Base extends Command
 {
+    /**
+     * @var MigrationManager
+     */
+    public $migrator = null;
+
 	/**
 	 * Initializes the command just after the input has been validated.
 	 *
@@ -21,17 +32,6 @@ abstract class Base extends Command
 	 */
 	protected function initialize(InputInterface $input, OutputInterface $output)
 	{
-		if (is_null($this->getApplication()->config))
-		{
-			$configPath = $input->getArgument("config");
-			
-			if (empty($configPath))
-				throw new \Exception("You must specify configuratin file");
-			
-			if (!is_file($configPath))
-				throw new \Exception("Configuration file: '{$configPath}' not found");
-				
-			$this->getApplication()->config = parse_ini_file($configPath); 
-		}
+        $this->getApplication()->readConfig();
 	}		
 }
