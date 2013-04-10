@@ -1,0 +1,11 @@
+# Настроки подключения к базе данных
+db:
+  dsn:  mysql:dbname=testmigration;host=localhost
+  user: root
+  pass: toor
+
+# Путь к директории с миграциями
+migration_path:
+
+# Путь к директории с бинарыми логами mysql, определяется в конфиге mysql
+binary_log_path: /var/log/mysql
