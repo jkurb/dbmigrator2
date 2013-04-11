@@ -10,7 +10,7 @@ use DBMigrator\Utils\MigrationManager;
 /**
  * @method DBMigrator\DBMigratorApp getApplication()
  */
-abstract class Base extends Command
+abstract class BaseCommand extends Command
 {
     /**
      * @var MigrationManager
@@ -32,5 +32,7 @@ abstract class Base extends Command
 	protected function initialize(InputInterface $input, OutputInterface $output)
 	{
         $this->getApplication()->readConfig();
+
+		$this->migrator = new MigrationManager($this->getApplication()->config);
 	}
 }

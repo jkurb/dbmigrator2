@@ -16,21 +16,21 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
 use Utils\MigrationHelper;
 
-class Migrate extends Base
+class Migrate extends BaseCommand
 {
 	private $from = null;
-	
+
 	private $to = null;
-	
+
 	private $force = false;
-	
+
 	protected function configure()
 	{
 		$this->setName("migrate")
-			->setDescription("Apply migraion.")			
+			->setDescription("Apply migraion.")
 			->setHelp(sprintf('%sApply migraion by name or index.%s', PHP_EOL, PHP_EOL))
 			->setDefinition(array(
-				new InputArgument("from:to", InputArgument::OPTIONAL, "Version or migration index range"),				
+				new InputArgument("from:to", InputArgument::OPTIONAL, "Version or migration index range"),
 			    new InputOption("force", "f", InputOption::VALUE_NONE, "Migrate from backup")
             ));
 	}
@@ -40,7 +40,7 @@ class Migrate extends Base
 		$this->prepareArguments($input);
 
 		exit;
-		
+
 		$migrations = $this->getAllMigrations();
 
 		$this->checkMigrations($migrations);
@@ -75,19 +75,19 @@ class Migrate extends Base
 		}
 		$this->restoreMigrations($migrations);
 		self::setCurrentVersion($migrStorage, $uid);
-		
+
 	}
 
 	private function prepareArguments($input)
 	{
-		$fromTo = $input->getArgument("from:to");		
+		$fromTo = $input->getArgument("from:to");
 
 		list($from, $to) = explode(":", $fromTo);
 		$from = (empty($from)) ? null : $from;
 		$to = (empty($to)) ? null : $to;
 
-		if ($this->isIndex($from))			
-			$from = MigrationHelper::getVersionByIndex($from);			
+		if ($this->isIndex($from))
+			$from = MigrationHelper::getVersionByIndex($from);
 
 		if ($this->isIndex($to))
 			$to = MigrationHelper::getVersionByIndex($to);
@@ -100,11 +100,11 @@ class Migrate extends Base
 
 		$this->force = $input->getOption("force");
 		$this->from = $from;
-		$this->to = $to;				
+		$this->to = $to;
 	}
 
 	private function isVersion($val)
-	{		
+	{
 		return preg_match("/^[0-9]+\.[0-9]+$/", $val) == 1;
 	}
 

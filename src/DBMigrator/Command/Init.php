@@ -11,7 +11,10 @@
 namespace DBMigrator\Command;
 
 use DBMigrator\DBMigratorApp;
+use DBMigrator\Utils\FileSystem;
+use DBMigrator\Utils\MigrationHelper;
 use DBMigrator\Utils\MigrationManager;
+use DBMigrator\Utils\DBMigratorException;
 
 use Symfony\Component\Console\Helper\DialogHelper;
 use Symfony\Component\Console\Input\InputArgument;
@@ -20,7 +23,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Yaml\Yaml;
 
-class Init extends Base
+class Init extends BaseCommand
 {
 	protected function configure()
 	{
@@ -42,23 +45,38 @@ class Init extends Base
 
         $this->getApplication()->readConfig();
 
-        $this->migrator = new MigrationManager(
-            $this->getApplication()->config["host"],
-            $this->getApplication()->config["username"],
-            $this->getApplication()->config["password"],
-            $this->getApplication()->config["database"]
-        );
+        $this->migrator = new MigrationManager($this->getApplication()->config);
 
-        $this->migrator->init($this->getApplication()->config["path"]);
+		//todo: create database if not found
 
-        //create migartion table
+		$this->migrator->createMigrationTable();
 
+		// проверяем существование начальной миграции
+		if ($this->migrator->getMigrationById(1))
+			throw new DBMigratorException("Can't apply init migration, because another exists");
 
+		// Идентификатор миграции, название директории в кторой хранится дамп
+		$uid = MigrationHelper::getCurrentTime();
+
+		MigrationHelper::checkDir($this->getApplication()->config["migration"]["path"], $uid);
+
+		// создаем запись в таблице
+		if (!$this->migrator->getMigrationByTime($uid))
+		{
+			sleep(1);
+			$this->migrator->insertMigration($uid, "Init migration");
+		}
+
+		// создаем начальный каталог c дампом базы
+		$this->migrator->createDump($uid);
+
+		// устанавливаем версию миграции
+		$this->migrator->setCurrentVersion($uid);
 	}
 
     /**
      * @param OutputInterface $output
-     * @throws \Exception
+     * @throws DBMigratorException
      */
     private function createConfigInteractive(OutputInterface $output)
     {
@@ -76,38 +94,32 @@ class Init extends Base
             exit(0);
         }
 
-        $host = $dialog->ask($output, "Host (default: localhost): ", "localhost");
-
-	    $dbname = $dialog->askAndValidate($output, "Database: ", function ($value) {
+	    $config["db"]["driver"] = $dialog->ask($output, "PDO driver (default: pdo_mysql): ", "pdo_mysql");
+	    $config["db"]["host"] = $dialog->ask($output, "Host (default: localhost): ", "localhost");
+	    $config["db"]["dbname"] = $dialog->askAndValidate($output, "Database: ", function ($value) {
 		    if (empty($value))
-			    throw new \Exception("Database can not be empty");
+			    throw new DBMigratorException("Database can not be empty");
 
 		    return $value;
 	    });
-
-	    $config["db"]["dsn"] = "mysql:dbname={$dbname};host={$host}";
-
         $config["db"]["user"] = $dialog->askAndValidate($output, "User name: ", function ($value) {
             if (empty($value))
-                throw new \Exception("Username can not be empty");
+                throw new DBMigratorException("Username can not be empty");
 
             return $value;
         });
-
-	    $config["db"]["pass"] = $dialog->ask($output, "Password: ", "");
-
+	    $config["db"]["password"] = $dialog->ask($output, "Password: ", "");
         $config["migration"]["table"] = $dialog->ask($output, "Migration table name (defalut: __migrations): ", "__migration");
-
 	    $config["migration"]["path"] = $dialog->askAndValidate($output, "Migration path: ", function ($value) {
             if (!is_dir($value))
-                throw new \Exception("Directory does not exist");
+                throw new DBMigratorException("Directory does not exist");
 
             return $value;
         });
 
         $output->write("<info>Generating config...</info>");
 
-        file_put_contents(DBMigratorApp::DEFAULT_CONFIG_NAME, Yaml::dump($config));
+	    FileSystem::putFile(DBMigratorApp::DEFAULT_CONFIG_NAME, Yaml::dump($config));
 
         $output->writeln("<info>done</info>");
     }

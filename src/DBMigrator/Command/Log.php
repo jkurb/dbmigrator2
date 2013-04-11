@@ -14,15 +14,15 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Log extends Base
+class Log extends BaseCommand
 {
 	protected function configure()
 	{
 		$this->setName("log")
-			->setDescription("Show migration log.")		
+			->setDescription("Show migration log.")
 			->setHelp(sprintf('%sShow migration log.%s', PHP_EOL, PHP_EOL))
 			->setDefinition(array(
-                 new InputArgument("config", InputArgument::OPTIONAL, "Path to config file"),              
+                 new InputArgument("config", InputArgument::OPTIONAL, "Path to config file"),
             ));
 	}
 

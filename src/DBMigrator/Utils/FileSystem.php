@@ -126,4 +126,14 @@ class FileSystem
 		return $list;
 	}
 
+	public static function getFile($filename, $flags = null)
+	{
+		return file_get_contents($filename, $flags);
+	}
+
+	public static function putFile($filename, $data, $flags = null)
+	{
+		file_put_contents($filename, $data, $flags);
+	}
+
 }

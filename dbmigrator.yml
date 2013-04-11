@@ -1,0 +1,9 @@
+db:
+    driver: pdo_mysql
+    host: 192.168.11.230
+    dbname: test
+    user: root
+    password: toor
+migration:
+    table: __migration
+    path: ./tests/data/storage

@@ -13,7 +13,7 @@ namespace DBMigrator\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Status extends Base
+class Status extends BaseCommand
 {
 	protected function configure()
 	{

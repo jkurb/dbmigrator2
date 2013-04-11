@@ -1,6 +1,6 @@
 <?php
 /**
- * Управление логикой миграций
+ * Менеджер миграций
  *
  * PHP version 5
  *
@@ -12,39 +12,229 @@
 
 namespace DBMigrator\Utils;
 
-use Exception;
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Tools\SchemaTool;
+use Doctrine\ORM\Tools\Setup;
+
+use DBMigratorExeption;
 
 class MigrationManager
 {
 	/**
-	 * Инкапсулиреут в себе низкоуровневые операции с БД и файловой системой
-	 *
-	 * @var MigrationManagerHelper
+	 * @var Doctrine\ORM\EntityManager
 	 */
-	public $helper = null;
+	public $enitityManager;
 
-	function __construct($host, $user, $password, $dbname)
+	public $dbTool = null;
+
+	private $host = null;
+	private $user = null;
+	private $password = null;
+	private $dbname = null;
+	private $migrationTable = null;
+	private $migrationPath = null;
+
+
+	/**
+	 * Устанавливает соединение с базой
+	 *
+	 * @param $config
+	 */
+	public function __construct($config)
 	{
-		$this->helper = new MigrationManagerHelper($host, $user, $password, $dbname);
+		$this->host = $config["db"]["host"];
+		$this->user = $config["db"]["user"];
+		$this->password = $config["db"]["password"];
+		$this->dbname = $config["db"]["dbname"];
+
+		$this->migrationTable = $config["migration"]["table"];
+		$this->migrationPath = $config["migration"]["path"];
+
+		$configDB = Setup::createAnnotationMetadataConfiguration(array("Migration.php"), true);
+		$this->enitityManager = EntityManager::create($config["db"], $configDB);
+
+		$this->dbTool = DBToolFacrory::create($config["db"]);
 	}
-	
-	public function init($migrStorage)
+
+	/**
+	 * Создает таблицу migration
+	 *
+	 * @return void
+	 */
+	public function createMigrationTable()
 	{
-		// создаем таблицу
-		$this->helper->createTable();
+		$conn = $this->enitityManager->getConnection();
+		if (!$conn->getSchemaManager()->tablesExist(array($this->migrationTable)))
+		{
+			$st = new SchemaTool($this->enitityManager);
 
-		// проверяем существование начальной миграции
-		if ($this->getMigrationById(1))
-			throw new \Exception("Can't apply init migration, because another exists");
+			$sqls = $st->getCreateSchemaSql(
+				array($this->enitityManager->getClassMetadata(__NAMESPACE__ . "\\Migration"))
+			);
 
-		// строим миграцию
-		$uid = $this->buildMigration($migrStorage, 'Init migration');
-
-		// устанавливаем версию миграции
-		self::setCurrentVersion($migrStorage, $uid);
-
+			$this->enitityManager->getConnection()->executeQuery($sqls[0]);
+		}
 	}
 
+	/**
+	 * Очищает таблицу migration
+	 *
+	 * @return void
+	 */
+	public function emptyMigrationTable()
+	{
+		$this->enitityManager->getConnection()->getSchemaManager()->dropAndCreateTable($this->migrationTable);
+	}
+
+	/**
+	 * Удаляет все из базы
+	 *
+	 * @return void
+	 */
+	public function emptyDatabase()
+	{
+		$this->enitityManager->getConnection()->getSchemaManager()->dropAndCreateDatabase($this->dbname);
+	}
+
+	/**
+	 * Возвращает все миграции
+	 *
+	 * @param string $order Порядок сортировки
+	 *
+	 * @return Migration[]
+	 */
+	public function getAllMigrations($order = "ASC")
+	{
+		return $this->getRepository()->findAll(array(), array("createTime" => $order));
+	}
+
+	/**
+	 * Возвращает последнюю миграцию
+	 *
+	 * @return Migration
+	 */
+	public function getLastMigration()
+	{
+		return $this->getRepository()->findOneBy(array(), array("createTime" => "DESC"));
+	}
+
+	/**
+	 * Возвращает последний Uid миграции из директории миграций
+	 *
+	 * @param $migrStorage
+	 * @return mixed
+	 */
+	public function getLastMigrationUidFromDiretories($migrStorage)
+	{
+		$migrationsUids = $this->getMigrationUidsByDirectories($migrStorage);
+		return array_shift($migrationsUids);
+	}
+
+	/**
+	 * Возвращает миграцию по времени создания
+	 *
+	 * @param $time
+	 *
+	 * @return Migration
+	 */
+	public function getMigrationByTime($time)
+	{
+		return $this->getRepository()->findOneBy(array("createTime" => $time), array("createTime" => "DESC"));
+	}
+
+	/**
+	 * Возвращает миграцию id
+	 *
+	 * @param $id
+	 *
+	 * @return Migration
+	 */
+	public function getMigrationById($id)
+	{
+		return $this->getRepository()->find($id);
+	}
+
+
+	public function getCurrentVersion()
+	{
+		return $this->getRepository()->findOneBy(array("isCurrent" => true))->id;
+	}
+
+	public function setCurrentVersion($uid)
+	{
+		$m = $this->getRepository()->findOneBy(array("createTime" => $uid));
+		$m->isCurrent = true;
+
+		$this->enitityManager->persist($m);
+		$this->enitityManager->flush();
+	}
+
+	/**
+	 * @return \Doctrine\ORM\EntityRepository
+	 */
+	private function getRepository()
+	{
+		return $this->enitityManager->getRepository(__NAMESPACE__ . "\\Migration");
+	}
+
+
+	public function executeQuery($sql)
+	{
+		$this->enitityManager->getConnection()->executeQuery($sql);
+	}
+
+	public function insertMigration($createTime, $comment)
+	{
+		$m = new Migration();
+		$m->createTime = $createTime;
+		$m->comment = $comment;
+
+		$this->enitityManager->persist($m);
+		$this->enitityManager->flush();
+	}
+
+	/**
+	 * Восстанавливает записи в таблице миграций
+	 *
+	 * @param  $migrations
+	 *
+	 * @return void
+	 */
+	public function restoreMigrations($migrations)
+	{
+		$this->emptyMigrationTable();
+
+		/* @var $m Migration */
+		foreach ($migrations as $m)
+		{
+			$this->enitityManager->persist($m);
+		}
+		$this->enitityManager->flush();
+	}
+
+	/**
+	 * Выполняет набор sql файлов из директории
+	 *
+	 * @param  $dir     Директория с файлами миграции
+	 * @param  $fileSet Набор имен файлов для выполнения
+	 *
+	 * @throws Exception
+	 * @return void
+	 */
+	public function importFiles($dir, $fileSet)
+	{
+		foreach ($fileSet as $fileName)
+		{
+			$path = "{$dir}/{$fileName}";
+			if (!is_readable($path))
+				throw new Exception("Can't read {$path}");
+
+			$this->dbTool->executeSQLFromFile($path);
+		}
+	}
+
+
+	//todo: to command class
     /**
      * Добавляет миграцию в хранилище
      *
@@ -52,13 +242,13 @@ class MigrationManager
      * @param  $migrStorage Директория, где хранятся миграции
      * @param string $comment Комментарий к миграции
      *
-     * @throws Exception
+     * @throws DBMigratorExeption
      * @return void
      */
 	public function commitMigration($migrPath, $migrStorage, $comment = '')
 	{
 		if (!$this->getMigrationById(1))
-			throw new Exception("Need init migration");
+			throw new DBMigratorExeption("Need init migration");
 
 		$this->helper->checkFile("{$migrPath}/delta.sql");
 
@@ -68,7 +258,7 @@ class MigrationManager
 
 		//copy delta
 		if (!copy("{$migrPath}/delta.sql", "{$path}/delta.sql"))
-			throw new Exception("Can't copy {$migrPath}/delta.sql to {$path}/delta.sql");
+			throw new DBMigratorExeption("Can't copy {$migrPath}/delta.sql to {$path}/delta.sql");
 
 		self::putInsertMigrationSql($uid, $comment, $path);
 
@@ -77,6 +267,7 @@ class MigrationManager
 		self::setCurrentVersion($migrStorage, $uid);
 	}
 
+	//todo: to helper
 	/**
 	 * @static
 	 * @param $createTime
@@ -87,42 +278,11 @@ class MigrationManager
 	public static function putInsertMigrationSql($createTime, $comment, $path)
 	{
 		$sql = "\nINSERT INTO __migration (createTime, comment) VALUES ({$createTime}, '{$comment}');\n";
-		$file = file_get_contents("{$path}/delta.sql");
-		file_put_contents("{$path}/delta.sql", str_replace("/*MIGRATION_INSERT_STATEMENT*/", $sql, $file));
+		$file = FileSystem::getFile("{$path}/delta.sql");
+		FileSystem::putFile("{$path}/delta.sql", str_replace("/*MIGRATION_INSERT_STATEMENT*/", $sql, $file));
 	}
 
-	/**
-	 * Строит миграцию
-	 *
-	 * @param $migrStorage
-	 * @param $comment
-	 *
-	 * @return mixed
-	 */
-	public function buildMigration($migrStorage, $comment)
-	{
-		$time = $this->getCurrentTime();
-		$path = "{$migrStorage}/{$time}";
-
-		$this->helper->checkDir($migrStorage, $path);
-
-		// создаем запись в таблице
-		if (!$this->getMigrationByTime($time))
-		{
-			sleep(1);
-			$this->insertMigration($time, $comment);
-		}
-
-		// создаем начальный каталог c дампом базы
-		$this->helper->createDump($path);
-
-		return $time;
-	}
-
-	public function getCurrentTime()
-	{
-		return number_format(microtime(true), 4, '.', '');
-	}
+	//todo: command
 
 	/**
 	 * Накатывает миграции от 0 до $number из хранилища,
@@ -178,66 +338,6 @@ class MigrationManager
 		self::setCurrentVersion($migrStorage, $uid);
 	}
 
-	/**
-	 * Возвращает все миграции
-	 *
-	 * @param string $order Порядок сортировки
-	 *
-	 * @return Migration[]
-	 */
-	public function getAllMigrations($order = "ASC")
-	{
-		return $this->helper->enitityManager->getRepository("Migration")
-            ->findAll(array(), array("createTime" => $order));
-	}
-
-	/**
-	 * Возвращает последнюю миграцию
-	 *
-	 * @return Migration
-	 */
-	public function getLastMigration()
-	{
-        return $this->helper->enitityManager->getRepository("Migration")
-            ->findOneBy(array(), array("createTime" => "DESC"));
-	}
-
-	/**
-	 * Возвращает последний Uid миграции из директории миграций
-	 *
-	 * @param $migrStorage
-	 * @return mixed
-	 */
-	public function getLastMigrationUidFromDiretories($migrStorage)
-	{
-		$migrationsUids = $this->getMigrationUidsByDirectories($migrStorage);
-	    return array_shift($migrationsUids);
-	}
-
-	/**
-	 * Возвращает миграцию по времени создания
-	 *
-	 * @param $time
-	 *
-	 * @return Migration
-	 */
-	public function getMigrationByTime($time)
-	{
-        return $this->helper->enitityManager->getRepository("Migration")
-            ->findOneBy(array("createTime" => $time), array("createTime" => "DESC"));
-	}
-
-	/**
-	 * Возвращает миграцию id
-	 *
-	 * @param $id
-	 *
-	 * @return Migration
-	 */
-	public function getMigrationById($id)
-	{
-        return $this->helper->enitityManager->getRepository("Migration")->find($id);
-	}
 
    /**
 	* Возврщает номер последней папки
@@ -255,7 +355,7 @@ class MigrationManager
 	/**
 	 * Создает файл delta.sql в указанной директории
 	 *
-	 * @throws Exception
+	 * @throws DBMigratorExeption
 	 * @param  $migrPath Имя директории, где создать миграцию
 	 *
 	 * @return void
@@ -263,50 +363,24 @@ class MigrationManager
 	public static function createTempMigration($migrPath)
 	{
 		if (!@mkdir($migrPath, 0777, true))
-			throw new Exception("Can't create {$migrPath}");
+			throw new DBMigratorExeption("Can't create {$migrPath}");
 
 		MigrationManagerHelper::createEmptyDelta($migrPath);
 	}
 
-	public function insertMigration($createTime, $comment)
-	{
-        $m = new Migration();
-        $m->createTime = $createTime;
-        $m->comment = $comment;
 
-        $this->helper->enitityManager->persist($m);
-        $this->helper->enitityManager->flush();
-	}
-
-	/**
-	 * Восстанавливает записи в таблице миграций
-	 *
-	 * @param  $migrations
-	 *
-	 * @return void
-	 */
-	public function restoreMigrations($migrations)
-	{
-		$this->helper->dropAndCreateTable();
-
-		/* @var $m Migration */
-		foreach ($migrations as $m)
-		{
-			$this->helper->enitityManager->persist($m);
-		}
-        $this->helper->enitityManager->flush();
-	}
-
+	//todo: to command
 	public function gotoLastMigration($migrStorage)
 	{
 		 $migrationsUids = $this->getMigrationUidsByDirectories($migrStorage);
 		 if (empty($migrationsUids))
-			 throw new Exception("Can't found migrations");
+			 throw new DBMigratorExeption("Can't found migrations");
 
 		 $this->applyMigrationsByUids($migrStorage, $migrationsUids);
 	}
 
 
+	//todo: to command
 	private function applyMigrationsByUids($migrStorage, $migrationsUids)
 	{
 		$this->helper->makeDBEmpty();
@@ -328,7 +402,7 @@ class MigrationManager
 	/**
 	 * Проверяет валидность Миграций в базе
 	 *
-	 * @throws Exception
+	 * @throws DBMigratorExeption
 	 * @param  $migrations массив сущностей миграций
 	 *
 	 * @return void
@@ -336,16 +410,16 @@ class MigrationManager
 	public function checkMigrations($migrations)
 	{
 		if (is_null($migrations) || empty($migrations))
-			throw new Exception("Can't found migrations");
+			throw new DBMigratorExeption("Can't found migrations");
 
 		if ($migrations[0]->id != 1)
-			throw new Exception("Can't found initial migration (with id 1)");
+			throw new DBMigratorExeption("Can't found initial migration (with id 1)");
 	}
 
 	/**
 	 * Проверяет номер миграции
 	 *
-	 * @throws Exception
+	 * @throws DBMigratorExeption
 	 * @param  $uuid
 	 *
 	 * @return void
@@ -353,32 +427,15 @@ class MigrationManager
 	public function checkMigration($uuid)
 	{
 		if (!$this->getMigrationByTime($uuid))
-			throw new Exception("Migration {$uuid} not found");
+			throw new DBMigratorExeption("Migration {$uuid} not found");
 	}
-
-	public function getCurrentVersion()
-	{
-        return $this->helper->enitityManager->getRepository("Migration")
-            ->findOneBy(array("isCurrent" => true))->id;
-	}
-
-	public function setCurrentVersion($id)
-	{
-        $m = $this->helper->enitityManager->getRepository("Migration")
-            ->find($id);
-
-        $m->isCurrent = true;
-
-        $this->helper->enitityManager->persist($m);
-        $this->helper->enitityManager->flush();
-    }
 
 	public function getDeltaByBinLog($binaryLogPath, $migrStorage, $unique = false)
 	{
 //		$currMigration = $this->getMigrationByTime($this->getCurrentVersion($migrStorage));
 //
 //		if (!$currMigration)
-//			throw new Exception("Incorrect current migration");
+//			throw new DBMigratorExeption("Incorrect current migration");
 //
 //		$r = $this->helper->executeQuery("SELECT NOW()");
 //		$endTime = mysql_result($r, 0);
@@ -396,5 +453,16 @@ class MigrationManager
 //
 //		return $queries . "\n";
 	}
+
+	public function createDump($path)
+	{
+		$fullPath = "{$this->migrationPath}/{$path}";
+		if (!@mkdir($fullPath, 0777))
+			throw new DBMigratorException("Can't create {$fullPath}");
+
+		$this->dbTool->dumpDataBase($fullPath);
+	}
+
+
 
 }

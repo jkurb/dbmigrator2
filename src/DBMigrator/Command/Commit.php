@@ -13,7 +13,7 @@ namespace DBMigrator\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Commit extends Base
+class Commit extends BaseCommand
 {
 	protected function configure()
 	{
@@ -23,7 +23,7 @@ class Commit extends Base
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output)
-	{		
+	{
 	}
-	
+
 }

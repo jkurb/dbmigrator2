@@ -13,7 +13,7 @@ namespace DBMigrator\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Create extends Base
+class Create extends BaseCommand
 {
 	protected function configure()
 	{
@@ -25,12 +25,12 @@ class Create extends Base
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
 		$path = $this->getApplication()->config["migrationStorage"];
-				
+
 		if (!is_writable($path))
-			throw new \Exception("Path '{$path}' is not writable");	
-			
+			throw new \Exception("Path '{$path}' is not writable");
+
 		file_put_contents("{$path}/delta.sql", null);
-		
+
 		$output->writeln("\n<info>Empty 'delta.sql' has created</info>\n");
 	}
 }
