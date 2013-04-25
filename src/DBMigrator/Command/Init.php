@@ -55,7 +55,7 @@ class Init extends BaseCommand
 		if ($this->migrator->getMigrationById(1))
 			throw new DBMigratorException("Can't apply init migration, because another exists");
 
-		// Идентификатор миграции, название директории в кторой хранится дамп
+		// Идентификатор миграции, название директории в которой хранится дамп
 		$uid = MigrationHelper::getCurrentTime();
 
 		MigrationHelper::checkDir($this->getApplication()->config["migration"]["path"], $uid);
@@ -72,6 +72,8 @@ class Init extends BaseCommand
 
 		// устанавливаем версию миграции
 		$this->migrator->setCurrentVersion($uid);
+
+		$output->writeln("\n<info>Migartion initialized</info>\n");
 	}
 
     /**

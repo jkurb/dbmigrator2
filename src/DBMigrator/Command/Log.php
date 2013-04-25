@@ -14,19 +14,32 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use DBMigrator\Utils\ConsolePrinter;
+
 class Log extends BaseCommand
 {
 	protected function configure()
 	{
 		$this->setName("log")
 			->setDescription("Show migration log.")
-			->setHelp(sprintf('%sShow migration log.%s', PHP_EOL, PHP_EOL))
-			->setDefinition(array(
-                 new InputArgument("config", InputArgument::OPTIONAL, "Path to config file"),
-            ));
+			->setHelp(sprintf('%sShow migration log.%s', PHP_EOL, PHP_EOL));
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
+		$migrations = $this->migrator->getAllMigrations();
+
+		$head = array("", "ID", "UID", "Create time", "comment");
+		$body = array();
+		foreach ($migrations as $m)
+		{
+			$curr = $m->isCurrent ? "*" : "";
+			$body[] = array($curr, $m->id, $m->createTime, date('Y-m-d H:i:s', $m->createTime), $m->comment);
+		}
+
+		$output->writeln("\n");
+		ConsolePrinter::setChannel($output);
+		ConsolePrinter::printT($body, $head);
+		$output->writeln("\n");
 	}
 }
