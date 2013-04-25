@@ -232,39 +232,6 @@ class MigrationManager
 	}
 
 
-	//todo: to command class
-    /**
-     * Добавляет миграцию в хранилище
-     *
-     * @param  $migrPath Директория, где хранится миграция для добаваления
-     * @param  $migrStorage Директория, где хранятся миграции
-     * @param string $comment Комментарий к миграции
-     *
-     * @throws DBMigratorExeption
-     * @return void
-     */
-	public function commitMigration($migrPath, $migrStorage, $comment = '')
-	{
-		if (!$this->getMigrationById(1))
-			throw new DBMigratorExeption("Need init migration");
-
-		$this->helper->checkFile("{$migrPath}/delta.sql");
-
-		$uid = $this->buildMigration($migrStorage, $comment);
-
-		$path = "{$migrStorage}/{$uid}";
-
-		//copy delta
-		if (!copy("{$migrPath}/delta.sql", "{$path}/delta.sql"))
-			throw new DBMigratorExeption("Can't copy {$migrPath}/delta.sql to {$path}/delta.sql");
-
-		self::putInsertMigrationSql($uid, $comment, $path);
-
-		FileSystem::delete($migrPath);
-
-		self::setCurrentVersion($migrStorage, $uid);
-	}
-
 	//todo: to helper
 	/**
 	 * @static

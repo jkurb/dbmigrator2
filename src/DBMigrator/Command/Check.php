@@ -24,5 +24,6 @@ class Check extends BaseCommand
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
+		throw new \Exception("Not implemented yet");
 	}
 }
