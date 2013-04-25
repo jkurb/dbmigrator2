@@ -154,10 +154,9 @@ class MigrationManager
 		return $this->getRepository()->find($id);
 	}
 
-
 	public function getCurrentVersion()
 	{
-		return $this->getRepository()->findOneBy(array("isCurrent" => true))->id;
+		return $this->getRepository()->findOneBy(array("isCurrent" => true))->createTime;
 	}
 
 	public function setCurrentVersion($uid)
@@ -176,7 +175,6 @@ class MigrationManager
 	{
 		return $this->enitityManager->getRepository(__NAMESPACE__ . "\\Migration");
 	}
-
 
 	public function executeQuery($sql)
 	{
@@ -350,22 +348,6 @@ class MigrationManager
 	{
 		$pattern = "/^\d{10}\.\d{4}$/is";
 		return FileSystem::fileList($migrStorage, $pattern, true);
-	}
-
-	/**
-	 * Создает файл delta.sql в указанной директории
-	 *
-	 * @throws DBMigratorExeption
-	 * @param  $migrPath Имя директории, где создать миграцию
-	 *
-	 * @return void
-	 */
-	public static function createTempMigration($migrPath)
-	{
-		if (!@mkdir($migrPath, 0777, true))
-			throw new DBMigratorExeption("Can't create {$migrPath}");
-
-		MigrationManagerHelper::createEmptyDelta($migrPath);
 	}
 
 

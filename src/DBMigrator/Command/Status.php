@@ -25,5 +25,7 @@ class Status extends BaseCommand
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
+		$currentUid = $this->migrator->getCurrentVersion();
+		$output->writeln("\n<info>Current migration is {$currentUid}</info>\n");
 	}
 }

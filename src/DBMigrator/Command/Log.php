@@ -15,6 +15,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use DBMigrator\Utils\ConsolePrinter;
+use DBMigrator\Utils\TableHelper;
 
 class Log extends BaseCommand
 {
@@ -29,7 +30,7 @@ class Log extends BaseCommand
 	{
 		$migrations = $this->migrator->getAllMigrations();
 
-		$head = array("", "ID", "UID", "Create time", "comment");
+		$head = array("", "ID", "UID", "Create time", "Comment");
 		$body = array();
 		foreach ($migrations as $m)
 		{
