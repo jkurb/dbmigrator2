@@ -37,8 +37,6 @@ class Commit extends BaseCommand
 		$comment = $input->getArgument("comment");
 		$uid = MigrationHelper::getCurrentTime();
 
-		//$comment = iconv(mb_detect_encoding($comment, mb_detect_order(), true), "UTF-8", $comment);
-
 		$output->write("\n<comment>Creating new migraton {$uid}...</comment>");
 		$this->migrator->enitityManager->beginTransaction();
 		try

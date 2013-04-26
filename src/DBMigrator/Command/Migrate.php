@@ -1,6 +1,16 @@
 <?php
 /**
  * Выполнение миграции
+ * Usage:
+ *
+ * migrate 1366709075.1069:1366972554.9822 - миграция с версии V1 к версии V2
+ * migrate :1366972554.9822 - миграция с текущей версии к версии V2
+ * migrate 1366972554.9822: - миграция с версии V1 к конечной
+ * migrate - миграция с текущей к конечной
+ * migrate --dry-run - вывод sql запросов, без выполнения
+ * migrate --force 1366972554.9822 - выполнить дамп миграции
+ * migrate :-3 -
+ *
  *
  * PHP version 5
  *
@@ -14,7 +24,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
-use Utils\MigrationHelper;
+use DBMigrator\Utils\MigrationHelper;
 
 class Migrate extends BaseCommand
 {
@@ -24,6 +34,8 @@ class Migrate extends BaseCommand
 
 	private $force = false;
 
+	private $dryRun = false;
+
 	protected function configure()
 	{
 		$this->setName("migrate")
@@ -31,13 +43,15 @@ class Migrate extends BaseCommand
 			->setHelp(sprintf('%sApply migraion by name or index.%s', PHP_EOL, PHP_EOL))
 			->setDefinition(array(
 				new InputArgument("from:to", InputArgument::OPTIONAL, "Version or migration index range"),
-			    new InputOption("force", "f", InputOption::VALUE_NONE, "Migrate from backup")
+			    new InputOption("force", "f", InputOption::VALUE_NONE, "Migrate from backup"),
+			    new InputOption("dry-run", null, InputOption::VALUE_NONE, "Outputs the operations but will not execute anything")
             ));
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$this->prepareArguments($input);
+		$this->migrator->getVersionByIndex(1);
+		//$this->prepareArguments($input);
 
 		exit;
 
@@ -78,19 +92,19 @@ class Migrate extends BaseCommand
 
 	}
 
-	private function prepareArguments($input)
+	private function prepareArguments(InputInterface $input)
 	{
+
+
+		exit;
 		$fromTo = $input->getArgument("from:to");
 
 		list($from, $to) = explode(":", $fromTo);
 		$from = (empty($from)) ? null : $from;
 		$to = (empty($to)) ? null : $to;
 
-		if ($this->isIndex($from))
-			$from = MigrationHelper::getVersionByIndex($from);
-
 		if ($this->isIndex($to))
-			$to = MigrationHelper::getVersionByIndex($to);
+			$to = $this->migrator->getVersionByIndex($to);
 
 		if (!$this->isVersion($from))
 			throw new \Exception("Invalid migration version 'from'");
@@ -98,9 +112,12 @@ class Migrate extends BaseCommand
 		if (!$this->isVersion($to))
 			throw new \Exception("Invalid migration version 'to'");
 
+		$this->force = $input->getOption("dry-run");
 		$this->force = $input->getOption("force");
 		$this->from = $from;
 		$this->to = $to;
+
+		var_dump($this);
 	}
 
 	private function isVersion($val)

@@ -27,9 +27,6 @@ class Create extends BaseCommand
 	{
 		$path = $this->getApplication()->config["migration"]["path"];
 
-		if (!is_writable($path))
-			throw new \Exception("Path '{$path}' is not writable");
-
 		FileSystem::putFile("{$path}/delta.sql", null);
 
 		$output->writeln("\n<info>Empty 'delta.sql' has created</info>\n");

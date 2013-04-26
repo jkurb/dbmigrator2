@@ -93,6 +93,10 @@ class FileSystem
 			}
 			rmdir($target);
 		}
+		else
+		{
+			unlink($target);
+		}
 	}
 
 	public static function move($startDir, $endDir)

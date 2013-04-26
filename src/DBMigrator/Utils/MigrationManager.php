@@ -162,8 +162,6 @@ class MigrationManager
 	public function setCurrentVersion($uid)
 	{
 		$m = $this->getRepository()->findOneBy(array("createTime" => $uid));
-
-
 		$m->isCurrent = true;
 
 		$this->enitityManager->persist($m);
@@ -194,25 +192,6 @@ class MigrationManager
 	}
 
 	/**
-	 * Восстанавливает записи в таблице миграций
-	 *
-	 * @param  $migrations
-	 *
-	 * @return void
-	 */
-	public function restoreMigrations($migrations)
-	{
-		$this->emptyMigrationTable();
-
-		/* @var $m Migration */
-		foreach ($migrations as $m)
-		{
-			$this->enitityManager->persist($m);
-		}
-		$this->enitityManager->flush();
-	}
-
-	/**
 	 * Выполняет набор sql файлов из директории
 	 *
 	 * @param  $dir     Директория с файлами миграции
@@ -235,7 +214,7 @@ class MigrationManager
 
 	public function putDelta($uid, $comment)
 	{
-		$sql = "\nINSERT INTO __migration (createTime, comment) VALUES ({$uid}, '{$comment}');\n";
+		$sql = "\nINSERT INTO {$this->migrationTable} (createTime, comment) VALUES ({$uid}, '{$comment}');\n";
 
 		$content = FileSystem::getFile("{$this->migrationPath}/delta.sql");
 		$content .= $sql;
@@ -254,63 +233,17 @@ class MigrationManager
 		$this->dbTool->dumpDataBase($fullPath);
 	}
 
-
-
-
-
-	//todo: command
-	/**
-	 * Накатывает миграции от 0 до $number из хранилища,
-	 * если установлен force, то накатывает только $number
-	 *
-	 * @param string $migrStorage Директория, где хранятся миграции
-	 * @param string $uid Уникальный идентификатор миграции
-	 * @param bool $force Флаг
-	 *
-	 *
-	 * @internal param $uuid Номер миграции
-	 * @return void
-	 */
-	public function gotoMigration($migrStorage, $uid, $force = false)
+	public function getVersionByIndex($ind)
 	{
-        $fileSet = array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql');
+		$ver = $this->getCurrentVersion();
 
-		$migrations = $this->getAllMigrations();
+		$res = $this->getRepository()->createQueryBuilder()
+			->select()
+	        ->setMaxResults(1);
 
-		$this->checkMigrations($migrations);
-		$this->checkMigration($uid, $migrations);
+		var_dump($res);
+		exit;
 
-		$this->helper->makeDBEmpty();
-
-		if ($force)
-		{
-
-            $this->helper->importFiles("{$migrStorage}/{$uid}", $fileSet);
-		}
-		else
-		{
-			/**
-			 * @var $m Migration
-			 */
-			foreach ($migrations as $m)
-			{
-				if ($m->id == 1)
-				{
-					$this->helper->importFiles("{$migrStorage}/{$m->createTime}", $fileSet);
-				}
-				else
-				{
-					$this->helper->importFiles("{$migrStorage}/{$m->createTime}", array('delta.sql'));
-				}
-
-				if ($m->createTime == $uid)
-				{
-					break;
-				}
-			}
-		}
-		$this->restoreMigrations($migrations);
-		self::setCurrentVersion($migrStorage, $uid);
 	}
 
 
