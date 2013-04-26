@@ -28,7 +28,7 @@ class Log extends BaseCommand
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$migrations = $this->migrator->getAllMigrations();
+		$migrations = $this->migrator->getAllMigrations("DESC");
 
 		$head = array("", "ID", "UID", "Create time", "Comment");
 		$body = array();

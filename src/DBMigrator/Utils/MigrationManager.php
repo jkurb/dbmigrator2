@@ -1,6 +1,6 @@
 <?php
 /**
- * Менеджер миграций
+ * Менеджер миграций: CRUD, операции с базой
  *
  * PHP version 5
  *
@@ -105,7 +105,7 @@ class MigrationManager
 	 */
 	public function getAllMigrations($order = "ASC")
 	{
-		return $this->getRepository()->findAll(array(), array("createTime" => $order));
+		return $this->getRepository()->findBy(array(), array("createTime" => $order));
 	}
 
 	/**
@@ -162,6 +162,8 @@ class MigrationManager
 	public function setCurrentVersion($uid)
 	{
 		$m = $this->getRepository()->findOneBy(array("createTime" => $uid));
+
+
 		$m->isCurrent = true;
 
 		$this->enitityManager->persist($m);
@@ -231,24 +233,32 @@ class MigrationManager
 		}
 	}
 
-
-	//todo: to helper
-	/**
-	 * @static
-	 * @param $createTime
-	 * @param $comment
-	 * @param $path
-	 * @return void
-	 */
-	public static function putInsertMigrationSql($createTime, $comment, $path)
+	public function putDelta($uid, $comment)
 	{
-		$sql = "\nINSERT INTO __migration (createTime, comment) VALUES ({$createTime}, '{$comment}');\n";
-		$file = FileSystem::getFile("{$path}/delta.sql");
-		FileSystem::putFile("{$path}/delta.sql", str_replace("/*MIGRATION_INSERT_STATEMENT*/", $sql, $file));
+		$sql = "\nINSERT INTO __migration (createTime, comment) VALUES ({$uid}, '{$comment}');\n";
+
+		$content = FileSystem::getFile("{$this->migrationPath}/delta.sql");
+		$content .= $sql;
+
+		FileSystem::putFile("{$this->migrationPath}/{$uid}/delta.sql", MigrationHelper::decorateDelta($content));
+		FileSystem::delete("{$this->migrationPath}/delta.sql");
 	}
 
-	//todo: command
+	public function createDump($uid)
+	{
+		$fullPath = "{$this->migrationPath}/{$uid}";
 
+		if (!mkdir($fullPath, 0777))
+			throw new DBMigratorException("Can't create {$fullPath}");
+
+		$this->dbTool->dumpDataBase($fullPath);
+	}
+
+
+
+
+
+	//todo: command
 	/**
 	 * Накатывает миграции от 0 до $number из хранилища,
 	 * если установлен force, то накатывает только $number
@@ -348,39 +358,39 @@ class MigrationManager
 		self::setCurrentVersion($migrStorage, end($migrationsUids));
 	}
 
-	/**
-	 * Проверяет валидность Миграций в базе
-	 *
-	 * @throws DBMigratorExeption
-	 * @param  $migrations массив сущностей миграций
-	 *
-	 * @return void
-	 */
-	public function checkMigrations($migrations)
-	{
-		if (is_null($migrations) || empty($migrations))
-			throw new DBMigratorExeption("Can't found migrations");
+//	/**
+//	 * Проверяет валидность Миграций в базе
+//	 *
+//	 * @throws DBMigratorExeption
+//	 * @param  $migrations массив сущностей миграций
+//	 *
+//	 * @return void
+//	 */
+//	public function checkMigrations($migrations)
+//	{
+//		if (is_null($migrations) || empty($migrations))
+//			throw new DBMigratorExeption("Can't found migrations");
+//
+//		if ($migrations[0]->id != 1)
+//			throw new DBMigratorExeption("Can't found initial migration (with id 1)");
+//	}
+//
+//	/**
+//	 * Проверяет номер миграции
+//	 *
+//	 * @throws DBMigratorExeption
+//	 * @param  $uuid
+//	 *
+//	 * @return void
+//	 */
+//	public function checkMigration($uuid)
+//	{
+//		if (!$this->getMigrationByTime($uuid))
+//			throw new DBMigratorExeption("Migration {$uuid} not found");
+//	}
 
-		if ($migrations[0]->id != 1)
-			throw new DBMigratorExeption("Can't found initial migration (with id 1)");
-	}
-
-	/**
-	 * Проверяет номер миграции
-	 *
-	 * @throws DBMigratorExeption
-	 * @param  $uuid
-	 *
-	 * @return void
-	 */
-	public function checkMigration($uuid)
-	{
-		if (!$this->getMigrationByTime($uuid))
-			throw new DBMigratorExeption("Migration {$uuid} not found");
-	}
-
-	public function getDeltaByBinLog($binaryLogPath, $migrStorage, $unique = false)
-	{
+//	public function getDeltaByBinLog($binaryLogPath, $migrStorage, $unique = false)
+//	{
 //		$currMigration = $this->getMigrationByTime($this->getCurrentVersion($migrStorage));
 //
 //		if (!$currMigration)
@@ -401,17 +411,6 @@ class MigrationManager
 //		echo "\n\n";
 //
 //		return $queries . "\n";
-	}
-
-	public function createDump($path)
-	{
-		$fullPath = "{$this->migrationPath}/{$path}";
-		if (!@mkdir($fullPath, 0777))
-			throw new DBMigratorException("Can't create {$fullPath}");
-
-		$this->dbTool->dumpDataBase($fullPath);
-	}
-
-
+//	}
 
 }

@@ -21,6 +21,7 @@ class DBMigratorApp extends Application
     	parent::__construct("Welcome to DBMigrator", "2.0");
 	    $this->setCatchExceptions(true);
 	    $this->setAutoExit(false);
+	    $this->setCatchExceptions(false);
 
         // todo: load commands from dir
     	$this->addCommands(array(

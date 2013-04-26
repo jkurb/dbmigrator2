@@ -72,13 +72,13 @@ class ConsolePrinter
 		}
 		else
 		{
-			$columnWidths = array_map('mb_strlen',$body[key($body)]);
+			$columnWidths = array_map('mb_strlen', $body[key($body)]);
 		}
 		foreach($body as $index => $row)
 		{
 			foreach($row as $jndex => $value)
 			{
-				$columnWidths[$jndex] = max(mb_strlen($value),$columnWidths[$jndex]);
+				$columnWidths[$jndex] = max(mb_strlen($value), $columnWidths[$jndex]);
 			}
 		}
 		return $columnWidths;
@@ -125,7 +125,7 @@ class ConsolePrinter
 		$string = '|';
 		foreach($line as $index => $value)
 		{
-			$string .= ' '.$value.str_repeat(' ',$columnWidths[$index]-mb_strlen($value)).' |';
+			$string .= ' '.$value.str_repeat(' ',$columnWidths[$index] - mb_strlen($value, "UTF-8")).' |';
 		}
 		return $string;
 	}

@@ -68,10 +68,10 @@ class MigrationHelper
 
 	public static function createEmptyDelta($path)
 	{
-		file_put_contents("{$path}/delta.sql", self::getDeltaTemplate());
+		file_put_contents("{$path}/delta.sql", self::decorateDelta());
 	}
 
-	public static function getDeltaTemplate()
+	public static function decorateDelta($sql)
 	{
 		$str = "/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;\n";
 		$str .= "/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;\n";
@@ -84,8 +84,7 @@ class MigrationHelper
 		$str .= "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;\n";
 		$str .= "/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;\n";
 		$str .= "/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;\n";
-		$str .= "\n/*YOU CODE HERE*/\n\n";
-		$str .= "/*MIGRATION_INSERT_STATEMENT*/\n";
+		$str .= "\n{$sql}\n\n";
 		$str .= "/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;\n";
 		$str .= "/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;\n";
 		$str .= "/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;\n";

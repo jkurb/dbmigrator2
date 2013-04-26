@@ -1,6 +1,12 @@
 <?php
 /**
- * Добавление миграции
+ * Добавление новой миграции
+ *
+ * Имеется delta.sql
+ *  1. Создаем каталог с названием меткой времени в хранилище с миграций
+ *  2. Создаем в каталоге дамп БД  файлы 'scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql'
+ *  3. Переносим туда delta.sql, подписанную запросом на вставку в таблицу миграций и декорированную доп директивами sql
+ *  4. Добавляем запись в таблицу миграций
  *
  * PHP version 5
  *
@@ -10,6 +16,7 @@
 
 namespace DBMigrator\Command;
 
+use DBMigrator\Utils\DBMigratorException;
 use DBMigrator\Utils\MigrationHelper;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -28,33 +35,26 @@ class Commit extends BaseCommand
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
 		$comment = $input->getArgument("comment");
+		$uid = MigrationHelper::getCurrentTime();
 
-		$migrPath = $this->getApplication()->config["migration"]["path"];
-		//$migrStorage = $this->getApplication()->config["migration"]["path"];
-
-		//var_dump(mb_detect_encoding($comment, mb_detect_order(), true));
 		//$comment = iconv(mb_detect_encoding($comment, mb_detect_order(), true), "UTF-8", $comment);
 
-		if (!$this->migrator->getMigrationById(1))
-			throw new DBMigratorExeption("Need init migration");
+		$output->write("\n<comment>Creating new migraton {$uid}...</comment>");
+		$this->migrator->enitityManager->beginTransaction();
+		try
+		{
+			$this->migrator->createDump($uid);
+			$this->migrator->putDelta($uid, $comment);
+			$this->migrator->insertMigration($uid, $comment);
 
-		MigrationHelper::checkFile("{$migrPath}/delta.sql");
-
-
-		$uid = $this->buildMigration($migrStorage, $comment);
-
-		$path = "{$migrStorage}/{$uid}";
-
-		//copy delta
-		if (!copy("{$migrPath}/delta.sql", "{$path}/delta.sql"))
-			throw new DBMigratorExeption("Can't copy {$migrPath}/delta.sql to {$path}/delta.sql");
-
-		self::putInsertMigrationSql($uid, $comment, $path);
-
-		FileSystem::delete($migrPath);
-
-		self::setCurrentVersion($migrStorage, $uid);
-
+			$this->migrator->enitityManager->commit();
+		}
+		catch (\Exception $e)
+		{
+			$this->migrator->enitityManager->rollback();
+			throw DBMigratorException::create($e);
+		}
+		$output->writeln("<info>Done</info>\n");
 	}
 
 }

@@ -4,6 +4,7 @@ db:
     dbname: test
     user: root
     password: toor
+    charset: utf8
 migration:
     table: __migration
     path: ./tests/data/storage
