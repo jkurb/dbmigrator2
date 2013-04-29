@@ -16,12 +16,11 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\SchemaTool;
 use Doctrine\ORM\Tools\Setup;
 
-use DBMigratorExeption;
 
 class MigrationManager
 {
 	/**
-	 * @var Doctrine\ORM\EntityManager
+	 * @var EntityManager
 	 */
 	public $enitityManager;
 
@@ -119,18 +118,6 @@ class MigrationManager
 	}
 
 	/**
-	 * Возвращает последний Uid миграции из директории миграций
-	 *
-	 * @param $migrStorage
-	 * @return mixed
-	 */
-	public function getLastMigrationUidFromDiretories($migrStorage)
-	{
-		$migrationsUids = $this->getMigrationUidsByDirectories($migrStorage);
-		return array_shift($migrationsUids);
-	}
-
-	/**
 	 * Возвращает миграцию по времени создания
 	 *
 	 * @param $time
@@ -197,20 +184,31 @@ class MigrationManager
 	 * @param  $dir     Директория с файлами миграции
 	 * @param  $fileSet Набор имен файлов для выполнения
 	 *
-	 * @throws Exception
+	 * @throws \Exception
 	 * @return void
 	 */
-	public function importFiles($dir, $fileSet)
+	public function importDump($dir, $fileSet)
 	{
 		foreach ($fileSet as $fileName)
 		{
 			$path = "{$dir}/{$fileName}";
 			if (!is_readable($path))
-				throw new Exception("Can't read {$path}");
+				throw new \Exception("Can't read {$path}");
 
 			$this->dbTool->executeSQLFromFile($path);
 		}
 	}
+
+    public function exportDump($uid)
+    {
+        $fullPath = "{$this->migrationPath}/{$uid}";
+
+        if (!mkdir($fullPath, 0777))
+            throw new DBMigratorException("Can't create {$fullPath}");
+
+        $this->dbTool->dumpDataBase($fullPath);
+    }
+
 
 	public function putDelta($uid, $comment)
 	{
@@ -223,104 +221,7 @@ class MigrationManager
 		FileSystem::delete("{$this->migrationPath}/delta.sql");
 	}
 
-	public function createDump($uid)
-	{
-		$fullPath = "{$this->migrationPath}/{$uid}";
 
-		if (!mkdir($fullPath, 0777))
-			throw new DBMigratorException("Can't create {$fullPath}");
-
-		$this->dbTool->dumpDataBase($fullPath);
-	}
-
-	public function getVersionByIndex($ind)
-	{
-		$ver = $this->getCurrentVersion();
-
-		$res = $this->getRepository()->createQueryBuilder()
-			->select()
-	        ->setMaxResults(1);
-
-		var_dump($res);
-		exit;
-
-	}
-
-
-   /**
-	* Возврщает номер последней папки
-	*
-	* @param $migrStorage
-	*
-	* @return mixed
-	*/
-	private function getMigrationUidsByDirectories($migrStorage)
-	{
-		$pattern = "/^\d{10}\.\d{4}$/is";
-		return FileSystem::fileList($migrStorage, $pattern, true);
-	}
-
-
-	//todo: to command
-	public function gotoLastMigration($migrStorage)
-	{
-		 $migrationsUids = $this->getMigrationUidsByDirectories($migrStorage);
-		 if (empty($migrationsUids))
-			 throw new DBMigratorExeption("Can't found migrations");
-
-		 $this->applyMigrationsByUids($migrStorage, $migrationsUids);
-	}
-
-
-	//todo: to command
-	private function applyMigrationsByUids($migrStorage, $migrationsUids)
-	{
-		$this->helper->makeDBEmpty();
-
-		// apply init migration
-		$_migrationsUids = $migrationsUids;
-		$uid = array_shift($_migrationsUids);
-		$this->helper->importFiles("{$migrStorage}/{$uid}",
-				array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql'));
-
-		foreach ($_migrationsUids as $uid)
-		{
-			$this->helper->importFiles("{$migrStorage}/{$uid}", array('delta.sql'));
-		}
-
-		self::setCurrentVersion($migrStorage, end($migrationsUids));
-	}
-
-//	/**
-//	 * Проверяет валидность Миграций в базе
-//	 *
-//	 * @throws DBMigratorExeption
-//	 * @param  $migrations массив сущностей миграций
-//	 *
-//	 * @return void
-//	 */
-//	public function checkMigrations($migrations)
-//	{
-//		if (is_null($migrations) || empty($migrations))
-//			throw new DBMigratorExeption("Can't found migrations");
-//
-//		if ($migrations[0]->id != 1)
-//			throw new DBMigratorExeption("Can't found initial migration (with id 1)");
-//	}
-//
-//	/**
-//	 * Проверяет номер миграции
-//	 *
-//	 * @throws DBMigratorExeption
-//	 * @param  $uuid
-//	 *
-//	 * @return void
-//	 */
-//	public function checkMigration($uuid)
-//	{
-//		if (!$this->getMigrationByTime($uuid))
-//			throw new DBMigratorExeption("Migration {$uuid} not found");
-//	}
 
 //	public function getDeltaByBinLog($binaryLogPath, $migrStorage, $unique = false)
 //	{

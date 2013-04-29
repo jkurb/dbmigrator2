@@ -4,12 +4,11 @@
  * Usage:
  *
  * migrate 1366709075.1069:1366972554.9822 - миграция с версии V1 к версии V2
- * migrate :1366972554.9822 - миграция с текущей версии к версии V2
+ * migrate :1366972554.9822 - миграция до версии V2
  * migrate 1366972554.9822: - миграция с версии V1 к конечной
  * migrate - миграция с текущей к конечной
  * migrate --dry-run - вывод sql запросов, без выполнения
  * migrate --force 1366972554.9822 - выполнить дамп миграции
- * migrate :-3 -
  *
  *
  * PHP version 5
@@ -20,6 +19,7 @@
 
 namespace DBMigrator\Command;
 
+use DBMigrator\Utils\DBMigratorException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
@@ -50,8 +50,7 @@ class Migrate extends BaseCommand
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$this->migrator->getVersionByIndex(1);
-		//$this->prepareArguments($input);
+		$this->prepareArguments($input);
 
 		exit;
 
@@ -94,30 +93,38 @@ class Migrate extends BaseCommand
 
 	private function prepareArguments(InputInterface $input)
 	{
-
-
-		exit;
 		$fromTo = $input->getArgument("from:to");
+        $this->dryRun = $input->getOption("dry-run");
+        $this->force = $input->getOption("force");
 
-		list($from, $to) = explode(":", $fromTo);
-		$from = (empty($from)) ? null : $from;
-		$to = (empty($to)) ? null : $to;
+        if ($this->force)
+        {
+            if (!$this->isVersion($fromTo))
+            {
+                throw new DBMigratorException("Invalid migration version 'to'");
+            }
 
-		if ($this->isIndex($to))
-			$to = $this->migrator->getVersionByIndex($to);
+            $this->to = $fromTo;
+        }
+        else if (!empty($fromTo))
+        {
+            list($from, $to) = explode(":", $fromTo);
+            $from = (empty($from)) ? null : $from;
+            $to = (empty($to)) ? null : $to;
 
-		if (!$this->isVersion($from))
-			throw new \Exception("Invalid migration version 'from'");
+            if ($from != null && !$this->isVersion($from))
+            {
+                throw new \Exception("Invalid migration version 'from'");
+            }
 
-		if (!$this->isVersion($to))
-			throw new \Exception("Invalid migration version 'to'");
+            if ($to != null && !$this->isVersion($to))
+            {
+                throw new \Exception("Invalid migration version 'to'");
+            }
 
-		$this->force = $input->getOption("dry-run");
-		$this->force = $input->getOption("force");
-		$this->from = $from;
-		$this->to = $to;
-
-		var_dump($this);
+            $this->from = $from;
+            $this->to = $to;
+        }
 	}
 
 	private function isVersion($val)

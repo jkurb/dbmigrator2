@@ -25,7 +25,8 @@
 	},
 	"autoload": {
 		"psr-0": {
-			"DBMigrator": "src/"
+			"DBMigrator": "src/",
+			"DBMigratorTest": "tests/"
 		}
 	}
 }

@@ -1,5 +1,9 @@
 {
-    "hash": "55556aff576c1f77212cc2118bbdd349",
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
+    ],
+    "hash": "999b7b7c541641799169fe3b049e9616",
     "packages": [
         {
             "name": "doctrine/common",
@@ -55,7 +59,7 @@
                 {
                     "name": "Johannes Schmitt",
                     "email": "schmittjoh@gmail.com",
-                    "homepage": "http://jmsyst.com",
+                    "homepage": "https://github.com/schmittjoh",
                     "role": "Developer of wrapped JMSSerializerBundle"
                 }
             ],

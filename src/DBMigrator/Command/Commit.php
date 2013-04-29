@@ -34,14 +34,14 @@ class Commit extends BaseCommand
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$comment = $input->getArgument("comment");
+        $comment = $input->getArgument("comment");
 		$uid = MigrationHelper::getCurrentTime();
 
 		$output->write("\n<comment>Creating new migraton {$uid}...</comment>");
 		$this->migrator->enitityManager->beginTransaction();
 		try
 		{
-			$this->migrator->createDump($uid);
+			$this->migrator->exportDump($uid);
 			$this->migrator->putDelta($uid, $comment);
 			$this->migrator->insertMigration($uid, $comment);
 

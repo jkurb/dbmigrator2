@@ -1,14 +1,15 @@
 <?php
 
-require_once "../vendor/autoload.php";
+namespace DBMigratorTest;
 
 use Symfony\Component\Console\Tester\ApplicationTester;
+use DBMigrator\DBMigratorApp;
 
-class DBMigratorAppTest extends PHPUnit_Framework_TestCase
+class DBMigratorAppTest extends \PHPUnit_Framework_TestCase
 {
 	public function testRun() 
 	{		
-		$migrator = new DBMigrator\DBMigratorApp();
+		$migrator = new DBMigratorApp();
 		$migrator->setAutoExit(false);
 		$migratorTester = new ApplicationTester($migrator);
 

@@ -36,16 +36,14 @@ class Init extends BaseCommand
     {
     }
 
-	protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output)
 	{
-        if (!is_file(DBMigratorApp::DEFAULT_CONFIG_NAME))
+        if (!is_file(self::DEFAULT_CONFIG_NAME))
         {
             $this->createConfigInteractive($output);
         }
 
-        $this->getApplication()->readConfig();
-
-        $this->migrator = new MigrationManager($this->getApplication()->config);
+        $this->init();
 
 		//todo: create database if not found
 
@@ -58,7 +56,7 @@ class Init extends BaseCommand
 		// Идентификатор миграции, название директории в которой хранится дамп
 		$uid = MigrationHelper::getCurrentTime();
 
-		MigrationHelper::checkDir($this->getApplication()->config["migration"]["path"], $uid);
+		MigrationHelper::checkDir($this->config["migration"]["path"], $uid);
 
 		// создаем запись в таблице
 		if (!$this->migrator->getMigrationByTime($uid))
@@ -68,7 +66,7 @@ class Init extends BaseCommand
 		}
 
 		// создаем начальный каталог c дампом базы
-		$this->migrator->createDump($uid);
+		$this->migrator->exportDump($uid);
 
 		// устанавливаем версию миграции
 		$this->migrator->setCurrentVersion($uid);
@@ -89,9 +87,10 @@ class Init extends BaseCommand
 
         if (!$dialog->askConfirmation(
             $output,
-            sprintf("Config file '%s' not found. Would you like to generate? (yes|no) ", DBMigratorApp::DEFAULT_CONFIG_NAME),
+            sprintf("Config file '%s' not found. Would you like to generate? (yes|no) ", self::DEFAULT_CONFIG_NAME),
             false)
-        ) {
+        )
+        {
             $output->writeln("<error>Command aborted</error>");
             exit(0);
         }
@@ -121,7 +120,7 @@ class Init extends BaseCommand
 
         $output->write("<info>Generating config...</info>");
 
-	    FileSystem::putFile(DBMigratorApp::DEFAULT_CONFIG_NAME, Yaml::dump($config));
+	    FileSystem::putFile(self::DEFAULT_CONFIG_NAME, Yaml::dump($config));
 
         $output->writeln("<info>done</info>");
     }

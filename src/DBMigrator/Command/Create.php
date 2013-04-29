@@ -25,7 +25,7 @@ class Create extends BaseCommand
 
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$path = $this->getApplication()->config["migration"]["path"];
+		$path = $this->config["migration"]["path"];
 
 		FileSystem::putFile("{$path}/delta.sql", null);
 
