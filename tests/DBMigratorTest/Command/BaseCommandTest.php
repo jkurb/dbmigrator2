@@ -31,11 +31,16 @@ abstract class BaseCommandTest extends \PHPUnit_Framework_TestCase
     public function __construct()
     {
         parent::__construct();
-
         $this->app = new DBMigratorApp();
-
-        $this->command = $this->app->find(strtolower(str_replace("Test", "", get_called_class())));
-        $this->command->init(__DIR__ . "/../../data/dbmigrator.yml");
-        $this->commandTester = new CommandTester($this->command);
     }
+
+	public function setUp()
+	{
+		preg_match("/.*\\\(.*?)Test$/is", get_called_class(), $match);
+		$cmd = strtolower($match[1]);
+
+		$this->command = $this->app->find($cmd);
+		$this->command->init(__DIR__ . "/../../data/dbmigrator.yml");
+		$this->commandTester = new CommandTester($this->command);
+	}
 }

@@ -38,12 +38,11 @@ class Init extends BaseCommand
 
     protected function execute(InputInterface $input, OutputInterface $output)
 	{
-        if (!is_file(self::DEFAULT_CONFIG_NAME))
+        if (!$this->config)
         {
             $this->createConfigInteractive($output);
+	        $this->init();
         }
-
-        $this->init();
 
 		//todo: create database if not found
 
@@ -78,12 +77,12 @@ class Init extends BaseCommand
      * @param OutputInterface $output
      * @throws DBMigratorException
      */
-    private function createConfigInteractive(OutputInterface $output)
+    public function createConfigInteractive(OutputInterface $output)
     {
         $config = array();
 
         /** @var $dialog DialogHelper */
-        $dialog = $this->getHelperSet()->get('dialog');
+        $dialog = $this->getHelperSet()->get("dialog");
 
         if (!$dialog->askConfirmation(
             $output,

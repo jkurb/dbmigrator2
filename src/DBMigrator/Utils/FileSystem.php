@@ -24,13 +24,20 @@ class FileSystem
 
 		foreach ($iterator as $path)
 		{
+
 			/* @var \DirectoryIterator $path */
 			if ($path->getFilename() == "." || $path->getFilename() == "..")
+			{
 				continue;
+			}
 			else if ($path->isDir())
+			{
 				rmdir($path->getPathname());
+			}
 			else
+			{
 				unlink($path->getPathname());
+			}
 		}
 	}
 
@@ -39,12 +46,16 @@ class FileSystem
 		if (is_dir($startDir))
 		{
 			if (!is_dir($endDir))
+			{
 				mkdir($endDir);
+			}
 
 			for ($source = new \DirectoryIterator($startDir); $source->valid(); $source->next())
 			{
 				if ($source->getFilename() == '.' || $source->getFilename() == '..')
+				{
 					continue;
+				}
 				else
 				{
 					if ($source->isDir())
@@ -70,6 +81,7 @@ class FileSystem
 
 	public static function delete($target)
 	{
+
 		if (is_dir($target))
 		{
 			chmod($target, 0777);

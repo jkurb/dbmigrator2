@@ -52,19 +52,15 @@ class Migrate extends BaseCommand
 	{
 		$this->prepareArguments($input);
 
-		exit;
+		$migrations = $this->migrator->getAllMigrations();
+		$this->migrator->emptyDatabase();
+		$path = $this->config["migration"]["path"];
 
-		$migrations = $this->getAllMigrations();
-
-		$this->checkMigrations($migrations);
-		$this->checkMigration($uid, $migrations);
-
-		$this->dbHelper->makeDBEmpty();
-
-		if ($force)
+		if ($this->force)
 		{
-			$this->dbHelper->importFiles("{$migrStorage}/{$uid}",
-				array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql'));
+			$this->migrator->importDump("{$path}/{$this->to}",
+				array("scheme.sql", "data.sql", "procedures.sql", "triggers.sql")
+			);
 		}
 		else
 		{
@@ -72,23 +68,21 @@ class Migrate extends BaseCommand
 			{
 				if ($m->id == 1)
 				{
-					$this->dbHelper->importFiles("{$migrStorage}/{$m->createTime}",
-						array('scheme.sql', 'data.sql', 'procedures.sql', 'triggers.sql'));
+					$this->migrator->importDump("{$path}/{$m->createTime}",
+						array("scheme.sql", "data.sql", "procedures.sql", "triggers.sql"));
 				}
 				else
 				{
-					$this->dbHelper->importFiles("{$migrStorage}/{$m->createTime}", array('delta.sql'));
+					$this->migrator->importDump("{$path}/{$m->createTime}", array("delta.sql"));
 				}
 
-				if ($m->createTime == $uid)
+				if ($m->createTime == $this->to)
 				{
 					break;
 				}
 			}
 		}
-		$this->restoreMigrations($migrations);
-		self::setCurrentVersion($migrStorage, $uid);
-
+		$this->migrator->setCurrentVersion($this->to);
 	}
 
 	private function prepareArguments(InputInterface $input)
@@ -130,10 +124,5 @@ class Migrate extends BaseCommand
 	private function isVersion($val)
 	{
 		return preg_match("/^[0-9]+\.[0-9]+$/", $val) == 1;
-	}
-
-	private function isIndex($val)
-	{
-		return preg_match("/^[0-9]+$/", $val) == 1;
 	}
 }

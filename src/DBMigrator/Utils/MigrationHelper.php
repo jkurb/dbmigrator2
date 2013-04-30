@@ -29,13 +29,13 @@ class MigrationHelper
 	public static function checkDir($migrStorage, $pathToCreate)
 	{
 		if (!is_dir($migrStorage))
-			throw new Exception("Directory '{$migrStorage}' does not exist");
+			throw new \Exception("Directory '{$migrStorage}' does not exist");
 
 		if (!is_writable($migrStorage))
-			throw new Exception("Directory '{$migrStorage}' is not writable");
+			throw new \Exception("Directory '{$migrStorage}' is not writable");
 
 		if (is_dir($pathToCreate))
-			throw new Exception("Directory {$pathToCreate} already exist");
+			throw new \Exception("Directory {$pathToCreate} already exist");
 	}
 
 	public static function checkFile($path)
@@ -43,10 +43,10 @@ class MigrationHelper
 		$hashEmptyDelta = "1b05bbfbef36037f33011dbddedc5d34";
 
 		if (!file_exists($path) || !is_readable($path))
-			throw new Exception("Not found temp delta in {$path}. You should use 'create'");
+			throw new \Exception("Not found temp delta in {$path}. You should use 'create'");
 
 		if ($hashEmptyDelta === md5_file($path))
-			throw new Exception("Put your code in {$path}");
+			throw new \Exception("Put your code in {$path}");
 	}
 
 	/**
