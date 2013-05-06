@@ -11,13 +11,10 @@ namespace DBMigratorTest\Command;
 
 use DBMigrator\Command\Init;
 use DBMigrator\Utils\FileSystem;
-use PHPUnit_Extensions_Database_DataSet_IDataSet;
-use PHPUnit_Extensions_Database_DB_IDatabaseConnection;
 use Symfony\Component\Console\Output\ConsoleOutput;
-use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Yaml\Yaml;
 
-class InitTest extends BaseCommandTest
+class InitTest extends BaseDBCommandTest
 {
 	public function testCreateConfig()
 	{
@@ -89,8 +86,6 @@ class InitTest extends BaseCommandTest
 	{
 		$this->commandTester->execute(array("command" => $this->command->getName()));
 		$this->assertRegExp("/Migartion initialized/", $this->commandTester->getDisplay());
-
-		$this->command->migrator->emptyDatabase();
 	}
 
 }

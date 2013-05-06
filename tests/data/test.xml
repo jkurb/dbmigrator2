@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<dataset>
+	<table name="user">
+		<column>id</column>
+		<column>login</column>
+		<column>password</column>
+		<row>
+			<value>1</value>
+			<value>admin</value>
+			<value>pass</value>
+		</row>
+		<row>
+			<value>2</value>
+			<value>user123</value>
+			<value>pass</value>
+		</row>
+	</table>
+
+	<table name="__migration">
+	</table>
+</dataset>
