@@ -84,6 +84,7 @@ class InitTest extends BaseDBCommandTest
 
 	public function testExecute()
 	{
+		$this->command->migrator->executeQuery("DROP TABLE IF EXISTS `__migration`");
 		$this->commandTester->execute(array("command" => $this->command->getName()));
 		$this->assertRegExp("/Migartion initialized/", $this->commandTester->getDisplay());
 	}

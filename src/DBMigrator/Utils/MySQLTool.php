@@ -47,7 +47,9 @@ class MySQLTool implements IDatabaseTool
 		);
 
 		if ($retVal !== 0)
+		{
 			throw new DBMigratorException("Error: " . print_r($output, 1));
+		}
 
 		// склеить возвращенную строку с SQL-кодом
 		$schemeData = implode("\n", $output);
@@ -80,7 +82,9 @@ class MySQLTool implements IDatabaseTool
 		);
 
 		if ($retVal !== 0)
+		{
 			throw new DBMigratorException("Error: " . print_r($output, 1));
+		}
 	}
 
 	/**
@@ -102,7 +106,9 @@ class MySQLTool implements IDatabaseTool
 		);
 
 		if ($retVal !== 0)
+		{
 			throw new DBMigratorException("Error: " . print_r($output, 1));
+		}
 
 		// склеить возвращенную строку с SQL-кодом
 		$triggersData = implode("\n", $output);
@@ -129,7 +135,9 @@ class MySQLTool implements IDatabaseTool
 			. " --extended-insert=false --triggers=false {$this->dbname} --skip-comments 2>&1", $output, $retVal
 		);
 		if ($retVal !== 0)
+		{
 			throw new DBMigratorException("Error: " . print_r($output, 1));
+		}
 
 		// склеить возвращенную строку с SQL-кодом
 		$spData = implode("\n", $output);
@@ -138,7 +146,6 @@ class MySQLTool implements IDatabaseTool
 		$spData = preg_replace('%/\*![\d]+\sDEFINER.*?\*/%si', '', $spData);
 		FileSystem::putFile("{$path}/procedures.sql", $spData);
 	}
-
 
 	public function dumpDataBase($path)
 	{
@@ -164,7 +171,9 @@ class MySQLTool implements IDatabaseTool
 		);
 
 		if ($retVal !== 0)
+		{
 			throw new DBMigratorException("File: {$file}\n" . $this->parseConsoleError($output));
+		}
 	}
 
 	/**
@@ -198,7 +207,9 @@ class MySQLTool implements IDatabaseTool
 		$queries = self::filterQueries($queries);
 
 		if ($unique)
+		{
 			$queries = self::getUniqueQueries($queries);
+		}
 
 		$strQueries = implode($delimeter . PHP_EOL, $queries);
 

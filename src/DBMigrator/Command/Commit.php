@@ -38,18 +38,18 @@ class Commit extends BaseCommand
 		$uid = MigrationHelper::getCurrentTime();
 
 		$output->write("\n<comment>Creating new migraton {$uid}...</comment>");
-		$this->migrator->enitityManager->beginTransaction();
+		$this->migrator->entityManager->beginTransaction();
 		try
 		{
 			$this->migrator->exportDump($uid);
 			$this->migrator->putDelta($uid, $comment);
 			$this->migrator->insertMigration($uid, $comment);
 
-			$this->migrator->enitityManager->commit();
+			$this->migrator->entityManager->commit();
 		}
 		catch (\Exception $e)
 		{
-			$this->migrator->enitityManager->rollback();
+			$this->migrator->entityManager->rollback();
 			throw DBMigratorException::create($e);
 		}
 		$output->writeln("<info>Done</info>\n");

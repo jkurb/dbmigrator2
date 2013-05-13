@@ -27,7 +27,7 @@ class Migration
 	/**
 	 * Время создания в unixtime
      *
-     * @Column(type="decimal", scale=4, precision=14, unique=true)
+     * @Column(type="string", length=18, unique=true)
 	 */
 	public $createTime = null;
 

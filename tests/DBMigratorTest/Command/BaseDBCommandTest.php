@@ -51,9 +51,11 @@ abstract class BaseDBCommandTest extends \PHPUnit_Extensions_Database_TestCase
 	 */
 	public function getConnection()
 	{
-		$pdo = new \PDO("mysql:host=localhost;dbname=test", "root", "toor",
+		$pdo = new \PDO("mysql:host=192.168.11.230;dbname=test", "root", "toor",
 			array(\PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8")
 		);
+
+		$pdo->setAttribute(\PDO::ATTR_AUTOCOMMIT, 1);
 		return $this->createDefaultDBConnection($pdo);
 	}
 

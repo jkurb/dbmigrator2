@@ -15,6 +15,7 @@ namespace DBMigrator\Utils;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\SchemaTool;
 use Doctrine\ORM\Tools\Setup;
+use Doctrine\DBAL\Logging\EchoSQLLogger;
 
 
 class MigrationManager
@@ -22,7 +23,7 @@ class MigrationManager
 	/**
 	 * @var EntityManager
 	 */
-	public $enitityManager;
+	public $entityManager;
 
 	public $dbTool = null;
 
@@ -50,7 +51,9 @@ class MigrationManager
 		$this->migrationPath = $config["migration"]["path"];
 
 		$configDB = Setup::createAnnotationMetadataConfiguration(array("Migration.php"), true);
-		$this->enitityManager = EntityManager::create($config["db"], $configDB);
+		$this->entityManager = EntityManager::create($config["db"], $configDB);
+
+		//$this->entityManager->getConfiguration()->setSQLLogger(new EchoSQLLogger());
 
 		$this->dbTool = DBToolFacrory::create($config["db"]);
 	}
@@ -62,16 +65,16 @@ class MigrationManager
 	 */
 	public function createMigrationTable()
 	{
-		$conn = $this->enitityManager->getConnection();
+		$conn = $this->entityManager->getConnection();
 		if (!$conn->getSchemaManager()->tablesExist(array($this->migrationTable)))
 		{
-			$st = new SchemaTool($this->enitityManager);
+			$st = new SchemaTool($this->entityManager);
 
 			$sqls = $st->getCreateSchemaSql(
-				array($this->enitityManager->getClassMetadata(__NAMESPACE__ . "\\Migration"))
+				array($this->entityManager->getClassMetadata(__NAMESPACE__ . "\\Migration"))
 			);
 
-			$this->enitityManager->getConnection()->executeQuery($sqls[0]);
+			$this->entityManager->getConnection()->executeQuery($sqls[0]);
 		}
 	}
 
@@ -82,7 +85,7 @@ class MigrationManager
 	 */
 	public function emptyMigrationTable()
 	{
-		$this->enitityManager->getConnection()->getSchemaManager()->dropAndCreateTable($this->migrationTable);
+		$this->entityManager->getConnection()->getSchemaManager()->dropAndCreateTable($this->migrationTable);
 	}
 
 	/**
@@ -92,7 +95,7 @@ class MigrationManager
 	 */
 	public function emptyDatabase()
 	{
-		$this->enitityManager->getConnection()->getSchemaManager()->dropAndCreateDatabase($this->dbname);
+		$this->entityManager->getConnection()->getSchemaManager()->dropAndCreateDatabase($this->dbname);
 	}
 
 	/**
@@ -148,11 +151,11 @@ class MigrationManager
 
 	public function setCurrentVersion($uid)
 	{
-		$m = $this->getRepository()->findOneBy(array("createTime" => $uid));
+		$m = $this->getRepository()->findOneBy(array("createTime" => floatval($uid)));
 		$m->isCurrent = true;
 
-		$this->enitityManager->persist($m);
-		$this->enitityManager->flush();
+		$this->entityManager->persist($m);
+		$this->entityManager->flush();
 	}
 
 	/**
@@ -160,22 +163,22 @@ class MigrationManager
 	 */
 	private function getRepository()
 	{
-		return $this->enitityManager->getRepository(__NAMESPACE__ . "\\Migration");
+		return $this->entityManager->getRepository(__NAMESPACE__ . "\\Migration");
 	}
 
 	public function executeQuery($sql)
 	{
-		$this->enitityManager->getConnection()->executeQuery($sql);
+		$this->entityManager->getConnection()->executeQuery($sql);
 	}
 
 	public function insertMigration($createTime, $comment)
 	{
 		$m = new Migration();
-		$m->createTime = $createTime;
+		$m->createTime = floatval($createTime);
 		$m->comment = $comment;
 
-		$this->enitityManager->persist($m);
-		$this->enitityManager->flush();
+		$this->entityManager->persist($m);
+		$this->entityManager->flush();
 	}
 
 	/**
